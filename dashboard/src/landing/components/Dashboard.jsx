@@ -92,30 +92,6 @@ const charts = [
 ];
 
 export function Dashboard() {
-  const [isDark, setIsDark] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return document.documentElement.classList.contains('dark');
-    }
-    return false;
-  });
-
-  useEffect(() => {
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.attributeName === 'class') {
-          setIsDark(document.documentElement.classList.contains('dark'));
-        }
-      });
-    });
-
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class']
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
   return (
     <section className="relative py-24 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 overflow-hidden">
       {/* Background Effects */}
@@ -207,9 +183,9 @@ export function Dashboard() {
                       <YAxis stroke="#6b7280" />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: isDark ? '#1e293b' : 'white',
-                          border: isDark ? '1px solid #334155' : '1px solid #e5e7eb',
-                          color: isDark ? '#fff' : '#000',
+                          backgroundColor: 'white',
+                          border: '1px solid #e5e7eb',
+                          color: '#000',
                           borderRadius: '0.75rem',
                           boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'
                         }}
@@ -227,9 +203,9 @@ export function Dashboard() {
                       <YAxis stroke="#6b7280" />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: isDark ? '#1e293b' : 'white',
-                          border: isDark ? '1px solid #334155' : '1px solid #e5e7eb',
-                          color: isDark ? '#fff' : '#000',
+                          backgroundColor: 'white',
+                          border: '1px solid #e5e7eb',
+                          color: '#000',
                           borderRadius: '0.75rem',
                           boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'
                         }}
@@ -256,9 +232,9 @@ export function Dashboard() {
                       </Pie>
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: isDark ? '#1e293b' : 'white',
-                          border: isDark ? '1px solid #334155' : '1px solid #e5e7eb',
-                          color: isDark ? '#fff' : '#000',
+                          backgroundColor: 'white',
+                          border: '1px solid #e5e7eb',
+                          color: '#000',
                           borderRadius: '0.75rem',
                           boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'
                         }}
