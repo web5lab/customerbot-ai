@@ -76,7 +76,14 @@ export function Dashboard() {
 
   useEffect(() => {
     dispatch(GetBots());
-  }, []);
+    
+    // Set up interval to refresh stats every 30 seconds
+    const interval = setInterval(() => {
+      dispatch(getDashboardStats());
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [dispatch]);
 
   return (
     <div className="min-h-screen bg-white">

@@ -29,7 +29,9 @@ import { useSelector, useDispatch } from 'react-redux';
 import { setBotsActive } from '../store/global.Slice';
 import logo from '../assets/logo.png';
 import { DeleteChatBot, GetBots, respondToInvitation } from '../store/global.Action';
+import { getDashboardStats } from '../store/global.Action';
 import { InvitationCard } from '../components/InvitationCard';
+import { dashboardStatsSelector } from '../store/global.Selctor';
 
 // Simple dropdown component
 const SimpleDropdown = ({ trigger, children }) => {
@@ -250,11 +252,14 @@ export function Bots() {
   const botsData = useSelector(botsSelector);
   const invitations = useSelector(invitationsSelector) || [];
   const dispatch = useDispatch();
+  const dashboardStats = useSelector(dashboardStatsSelector);
 
   // Debug logging
   useEffect(() => {
     console.log("Bots data:", botsData);
     console.log("Invitations data:", invitations);
+    // Fetch dashboard stats
+    dispatch(getDashboardStats());
   }, [botsData, invitations]);
 
   const handleBotSelect = (bot) => {
@@ -377,10 +382,26 @@ export function Bots() {
       <div className="max-w-7xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           {[
-            { label: 'Total Bots', value: botsData.length, icon: MessageSquare },
-            { label: 'Active Bots', value: botsData.filter(b => b.status === 'active').length, icon: Activity },
-            { label: 'Total Conversations', value: '2.4k', icon: Users },
-            { label: 'This Month', value: '847', icon: MessageSquare }
+            { 
+              label: 'Total Bots', 
+              value: dashboardStats?.stats?.totalBots || botsData.length, 
+              icon: MessageSquare 
+            },
+            { 
+              label: 'Active Bots', 
+              value: dashboardStats?.stats?.activeBots || botsData.filter(b => b.status === 'active').length, 
+              icon: Activity 
+            },
+            { 
+              label: 'Total Conversations', 
+              value: dashboardStats?.stats?.totalConversations?.toLocaleString() || '0', 
+              icon: Users 
+            },
+            { 
+              label: 'Total Messages', 
+              value: dashboardStats?.stats?.totalMessages?.toLocaleString() || '0', 
+              icon: MessageSquare 
+            }
           ].map((stat, index) => (
             <div key={index} className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-sm transition-shadow">
               <div className="flex items-center justify-between">

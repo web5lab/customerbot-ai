@@ -9,6 +9,7 @@ import puppeteer from 'puppeteer';
 import { insertBotData } from '../services/vectorServices.js';
 import Team from '../models/Team.schema.js';
 import User from '../models/User.schema.js';
+import { createInitialStats } from './stats.controller.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -117,6 +118,15 @@ export const createChatBot = async (req, res) => {
         if (pageText) {
             await insertBotData({ botId: newBot._id, Data: pageText });
         }
+
+        // Create initial stats for the new bot
+        try {
+            await createInitialStats(newBot._id);
+        } catch (statsError) {
+            console.error('Error creating initial stats:', statsError);
+            // Don't fail bot creation if stats creation fails
+        }
+
         res.status(201).json({ message: 'Chatbot created successfully', bot: newBot });
     } catch (error) {
         console.error('Error creating chatbot:', error);

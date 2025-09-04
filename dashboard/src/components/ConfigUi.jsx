@@ -70,10 +70,14 @@ export function ConfigUI() {
   const handleSave = async () => {
     if (activeBot) {
       try {
-        await updateChatBot({ 
+        const response = await updateChatBot({ 
           data: uiConfig, 
           botId: activeBot._id 
         });
+        
+        // Refresh dashboard stats after saving config
+        dispatch(getDashboardStats());
+        
         alert('Configuration saved successfully!');
       } catch (error) {
         console.error('Error saving configuration:', error);
