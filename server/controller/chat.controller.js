@@ -594,3 +594,58 @@ export const getAgentActiveSessions = async (req, res) => {
         });
     }
 };
+
+// Delete session
+export const deleteSession = async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+        const userId = req.user.userId;
+
+        if (!mongoose.Types.ObjectId.isValid(sessionId)) {
+            return res.status(400).json({ message: 'Invalid session ID' });
+        }
+
+        const session = await Session.findById(sessionId);
+        if (!session) {
+            return res.status(404).json({ message: 'Session not found' });
+        }
+
+        // Check if user has permission to delete this session
+        // Either the user owns the bot or is a team member with appropriate permissions
+        const bot = await BotConfig.findById(session.botId);
+        if (!bot) {
+            return res.status(404).json({ message: 'Bot not found' });
+        }
+
+        const platform = await Platform.findById(bot.platFormId);
+        const isOwner = platform && platform.userId.toString() === userId;
+
+        if (!isOwner) {
+            // Check if user is a team member with admin/editor role
+            const team = await mongoose.model('Team').findOne({
+                botId: session.botId,
+                'members.userId': userId,
+                'members.status': 'active',
+                'members.role': { $in: ['admin', 'editor'] }
+            });
+
+            if (!team) {
+                return res.status(403).json({ message: 'Access denied' });
+            }
+        }
+
+        // Delete the session
+        await Session.findByIdAndDelete(sessionId);
+
+        // Also delete any associated leads
+        await mongoose.model('Lead').deleteMany({ sessionId });
+
+        res.status(200).json({ message: 'Session deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting session:', error);
+        res.status(500).json({
+            error: 'Error deleting session',
+            details: error.message
+        });
+    }
+};

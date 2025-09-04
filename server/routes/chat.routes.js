@@ -10,7 +10,8 @@ import {
     getAllActiveSessions,
     assignAgentToSession,
     sendAgentMessage,
-    getAgentActiveSessions
+    getAgentActiveSessions,
+    deleteSession
 } from '../controller/chat.controller.js';
 import { authenticateToken } from '../middleware/auth.js';
 
