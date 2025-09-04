@@ -15,6 +15,29 @@ export function Dashboard() {
   useEffect(() => {
     dispatch(GetBots());
     dispatch(getDashboardStats());
+    dispatch(getUserSubscription());
+    dispatch(getUsageStats());
+    
+    // Set up interval to refresh stats every 30 seconds
+    const interval = setInterval(() => {
+      dispatch(getDashboardStats());
+      if (activeBot) {
+        dispatch(getBotStats({ botId: activeBot._id }));
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [dispatch, activeBot]);
+
+  useEffect(() => {
+    if (activeBot) {
+      dispatch(getBotStats({ botId: activeBot._id }));
+    }
+  }, [activeBot, dispatch]);
+
+  useEffect(() => {
+    dispatch(GetBots());
+    dispatch(getDashboardStats());
     
     // Set up interval to refresh stats every 30 seconds
     const interval = setInterval(() => {
@@ -49,6 +72,35 @@ export function Dashboard() {
       change: dashboardStats?.growth?.users || '+0%',
       changeType: 'positive'
     }
+  ];
+
+  // Generate recent activities from real data
+  const recentActivities = dashboardStats?.recentActivity || [
+    { 
+      id: 1, 
+      action: 'No recent activity', 
+      time: 'Just now', 
+      type: 'system',
+      icon: Activity
+    }
+  ];
+
+  const systemStatus = [
+    { 
+      label: 'API Status', 
+      status: 'Operational', 
+      icon: Target 
+    },
+    { 
+      label: 'Bot Status', 
+      status: activeBot ? 'Active' : 'No Bot Selected', 
+      icon: Brain 
+    },
+    { 
+      label: 'Database', 
+      status: 'Connected', 
+      icon: Award 
+    },
   ];
 
   // Generate recent activities from real data
