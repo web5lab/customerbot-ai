@@ -170,7 +170,7 @@ export const initializeSocket = (server) => {
 
                 // Add system message
                 session.messages.push({
-                    role: 'system',
+                    role: 'agent',
                     content: 'Customer has requested human support. An agent will join shortly.',
                     timestamp: new Date()
                 });
@@ -251,7 +251,7 @@ export const initializeSocket = (server) => {
                 
                 // Add system message
                 session.messages.push({
-                    role: 'system',
+                    role: 'agent',
                     content: `${socket.user.name} has joined the conversation`,
                     timestamp: new Date()
                 });

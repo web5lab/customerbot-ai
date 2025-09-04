@@ -465,7 +465,7 @@ export const assignAgentToSession = async (req, res) => {
         
         // Add system message
         session.messages.push({
-            role: 'system',
+            role: 'agent',
             content: `${user.name} has joined the conversation`,
             timestamp: new Date()
         });
