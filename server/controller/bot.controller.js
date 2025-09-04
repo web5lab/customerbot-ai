@@ -146,8 +146,8 @@ export const getChatBot = async (req, res) => {
         }).populate('botId');
 
         const teamBots = teamMemberships
-            .map(team => team.botId)
-            .filter(bot => bot !== null); // Filter out any null values
+            .filter(team => team.botId !== null) // Filter out teams with null botId first
+            .map(team => team.botId);
 
         // Get pending invitations for this user
         // Get user data first
@@ -162,7 +162,9 @@ export const getChatBot = async (req, res) => {
             'members.status': 'pending'
         }).populate('botId').populate('members.invitedBy', 'name email');
 
-        const invitations = pendingInvitations.map(team => {
+        const invitations = pendingInvitations
+            .filter(team => team.botId !== null) // Filter out teams with null botId
+            .map(team => {
             const userMember = team.members.find(m => 
                 m.email === user.email && m.status === 'pending'
             );
@@ -196,11 +198,11 @@ export const getChatBot = async (req, res) => {
 
         // Add team bots
         teamBots.forEach(bot => {
-            if (!allBotIds.has(bot._id.toString())) {
+            if (bot && bot._id && !allBotIds.has(bot._id.toString())) {
                 allBotIds.add(bot._id.toString());
                 
                 // Find user's role in this team
-                const team = teamMemberships.find(t => t.botId._id.toString() === bot._id.toString());
+                const team = teamMemberships.find(t => t.botId && t.botId._id && t.botId._id.toString() === bot._id.toString());
                 const userMember = team.members.find(m => m.userId.toString() === id);
                 
                 allBots.push({
