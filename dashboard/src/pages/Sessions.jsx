@@ -509,157 +509,134 @@ export function Sessions() {
                       <option value="urgent">Urgent</option>
                     </select>
                     
-                    <input
-                      type="text"
-                      value={sessionTags}
-                      onChange={(e) => {
-                        setSessionTags(e.target.value);
-                        handleUpdateSessionStatus({ tags: e.target.value.split(',').map(tag => tag.trim()) });
-                      }}
-                      placeholder="Add tags (comma separated)"
-                      className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
-                    />
+                    <button
+                      onClick={() => setShowResolveModal(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      Mark Resolved
+                    </button>
                   </div>
-                  
-                  <button
-                    onClick={() => setShowResolveModal(true)}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-                  >
-                    <CheckCircle className="w-4 h-4 inline mr-2" />
-                    Mark Resolved
-                  </button>
                 </div>
               </div>
 
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                {selectedSession.messages?.map((message, index) => (
-                  <div key={index} className={`flex ${message.role === 'user' || message.role === 'agent' ? 'justify-end' : 'justify-start'}`}>
-                    <div className="flex items-start gap-4 max-w-[85%]">
-                      {(message.role === 'bot' || message.role === 'system') && (
-                        <div className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
-                          {message.role === 'system' ? (
-                            <CheckCircle className="w-4 h-4 text-green-600" />
-                          ) : (
-                            <Bot className="w-4 h-4 text-gray-600" />
-                          )}
-                        </div>
-                      )}
-
-                      <div className={`flex flex-col ${(message.role === 'user' || message.role === 'agent') ? 'items-end' : 'items-start'}`}>
+              {/* Messages Area */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                {selectedSession.messages?.map((message) => (
+                  <div
+                    key={message._id}
+                    className={`flex gap-3 ${
+                      message.sender === 'user' || message.role === 'user' ? 'justify-end' : 'justify-start'
+                    }`}
+                  >
+                    {(message.sender === 'bot' || message.role === 'bot') && (
+                      <div className="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center flex-shrink-0">
+                        <Bot className="w-4 h-4 text-gray-600" />
+                      </div>
+                    )}
+                    
+                    <div className={`max-w-xs lg:max-w-md xl:max-w-lg ${
+                      message.sender === 'user' || message.role === 'user' ? 'order-first' : ''
+                    }`}>
+                      <div className={`rounded-lg px-4 py-2 ${
+                        message.sender === 'user' || message.role === 'user'
+                          ? 'bg-gray-900 text-white'
+                          : 'bg-gray-100 text-gray-900'
+                      }`}>
                         {editingMessageId === message._id ? (
-                          <div className="w-full">
+                          <div className="space-y-2">
                             <textarea
                               value={editedContent}
                               onChange={(e) => setEditedContent(e.target.value)}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 resize-none"
+                              className="w-full p-2 border border-gray-300 rounded resize-none text-gray-900"
                               rows={3}
                             />
-                            <div className="flex gap-2 mt-2">
+                            <div className="flex gap-2">
                               <button
                                 onClick={saveEdit}
-                                className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                                className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700"
                               >
                                 Save
                               </button>
                               <button
                                 onClick={cancelEditing}
-                                className="px-3 py-1 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 text-sm"
+                                className="px-3 py-1 bg-gray-600 text-white text-xs rounded hover:bg-gray-700"
                               >
                                 Cancel
                               </button>
                             </div>
                           </div>
                         ) : (
-                          <div
-                            className={`rounded-lg px-4 py-3 border ${
-                              message.role === 'user' || message.role === 'agent'
-                                ? 'bg-gray-900 text-white border-gray-900'
-                                : message.role === 'system'
-                                  ? 'bg-green-50 text-green-800 border-green-200'
-                                  : 'bg-white text-gray-900 border-gray-200'
-                            }`}
-                          >
-                            <p className="leading-relaxed">{message.content}</p>
-                            {message.role !== 'system' && (
+                          <div className="group relative">
+                            <p className="text-sm">{message.content}</p>
+                            {(message.sender === 'bot' || message.role === 'bot') && (
                               <button
                                 onClick={() => startEditing(message)}
-                                className="mt-2 text-xs text-gray-500 hover:text-gray-700"
+                                className="absolute -right-8 top-0 opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-gray-600 transition-opacity"
                               >
-                                Edit
+                                <Edit3 className="w-3 h-3" />
                               </button>
                             )}
                           </div>
                         )}
-                        <div className="mt-2 text-xs text-gray-500">
-                          <span>{formatTimestamp(message.timestamp)}</span>
-                          {(message.role === 'user' || message.role === 'agent') && <span className="text-green-500 ml-1">✓</span>}
-                        </div>
                       </div>
-
-                      {(message.role === 'user' || message.role === 'agent') && (
-                        <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center">
-                          <User className="w-4 h-4 text-white" />
-                        </div>
-                      )}
+                      <p className="text-xs text-gray-500 mt-1 px-1">
+                        {formatTimestamp(message.timestamp)}
+                      </p>
                     </div>
+
+                    {(message.sender === 'user' || message.role === 'user') && (
+                      <div className="w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center flex-shrink-0">
+                        <User className="w-4 h-4" />
+                      </div>
+                    )}
                   </div>
                 ))}
+
+                {isTyping && (
+                  <div className="flex gap-3 justify-start">
+                    <div className="w-8 h-8 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center flex-shrink-0">
+                      <Bot className="w-4 h-4 text-gray-600" />
+                    </div>
+                    <div className="bg-gray-100 text-gray-900 rounded-lg px-4 py-2">
+                      <div className="flex space-x-1">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input Area */}
-              <div className="p-6 border-t border-gray-200 bg-white">
-                <form onSubmit={handleSendMessage} className="flex items-end gap-4">
-                  <div className="flex-1 relative">
-                    <textarea
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      placeholder="Type your message..."
-                      rows={1}
-                      className="w-full px-4 py-3 pr-16 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent resize-none"
-                      style={{
-                        minHeight: '48px',
-                        maxHeight: '120px'
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSendMessage(e);
-                        }
-                      }}
-                    />
-                    <div className="absolute right-4 bottom-3 text-xs text-gray-500">
-                      {newMessage.length}/500
-                    </div>
-                  </div>
+              {/* Message Input */}
+              <div className="border-t border-gray-200 p-6">
+                <form onSubmit={handleSendMessage} className="flex gap-3">
+                  <input
+                    type="text"
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    placeholder="Type your message..."
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                  />
                   <button
                     type="submit"
-                    className={`p-3 rounded-lg transition-all ${
-                      !newMessage.trim()
-                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                        : 'bg-gray-900 text-white hover:bg-gray-800'
-                    }`}
                     disabled={!newMessage.trim()}
+                    className="px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
                   >
-                    <Send className="w-5 h-5" />
+                    <Send className="w-4 h-4" />
+                    Send
                   </button>
                 </form>
-
-                <div className="flex items-center justify-between mt-3 text-xs text-gray-500">
-                  <span>Press Enter to send, Shift + Enter for new line</span>
-                  <span>Agent support interface</span>
-                </div>
               </div>
             </>
           ) : (
-            <div className="flex-1 flex items-center justify-center bg-gray-50">
+            <div className="flex-1 flex items-center justify-center text-gray-500">
               <div className="text-center">
-                <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-4 border border-gray-200">
-                  <MessageSquare className="w-8 h-8 text-gray-400" />
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No Session Selected</h3>
-                <p className="text-gray-500">Select a conversation from the sidebar to start managing support</p>
+                <MessageSquare className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                <p className="text-lg font-medium">Select a conversation</p>
+                <p className="text-sm">Choose a session from the sidebar to start chatting</p>
               </div>
             </div>
           )}
@@ -668,3 +645,4 @@ export function Sessions() {
     </div>
   );
 }
+                    
