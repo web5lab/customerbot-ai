@@ -2,7 +2,8 @@ import { Activity, Users, FileText, Brain, TrendingUp, MessageSquare, Zap, Clock
 import { GetBots, getBotStats, getDashboardStats } from '../store/global.Action';
 import { useDispatch, useSelector } from 'react-redux';
 import { useEffect } from 'react';
-import { activeBotSelector, botStatsSelector, dashboardStatsSelector } from '../store/global.Selctor';
+import { activeBotSelector, botStatsSelector, dashboardStatsSelector, subscriptionSelector, usageStatsSelector } from '../store/global.Selctor';
+import { getUserSubscription, getUsageStats } from '../store/global.Action';
 
 
 export function Dashboard() {
