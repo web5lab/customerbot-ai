@@ -473,6 +473,29 @@ export const initializeSocket = (server) => {
             }
         });
 
+        // Get all active sessions for proactive joining
+        socket.on('get-all-sessions', async (data) => {
+            const { botId } = data;
+            
+            if (!socket.isAgent || !socket.isAuthenticated) {
+                socket.emit('error', { message: 'Agent authentication required' });
+                return;
+            }
+
+            try {
+                const allSessions = await Session.find({
+                    botId,
+                    status: 'active',
+                    assignedAgent: null,
+                    messageCount: { $gt: 0 }
+                }).sort({ timestamp: -1 });
+
+                socket.emit('all-sessions-update', { sessions: allSessions });
+            } catch (error) {
+                console.error('Error fetching all sessions:', error);
+                socket.emit('error', { message: 'Failed to fetch all sessions' });
+            }
+        });
         // Transfer session to another agent
         socket.on('transfer-session', async (data) => {
             const { sessionId, targetAgentId, reason } = data;

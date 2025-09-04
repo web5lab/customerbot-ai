@@ -115,6 +115,13 @@ class SocketService {
         this.socket.emit('get-active-sessions', { botId });
     }
 
+    // Get all sessions for proactive agent joining
+    getAllSessions(botId) {
+        if (!this.socket) return;
+        
+        this.socket.emit('get-all-sessions', { botId });
+    }
+
     // Transfer session to another agent
     transferSession(sessionId, targetAgentId, reason = null) {
         if (!this.socket) return;
