@@ -509,3 +509,162 @@ export function Sessions() {
                       <option value="urgent">Urgent</option>
                     </select>
                     
+                    <input
+                      type="text"
+                      value={sessionTags}
+                      onChange={(e) => {
+                        setSessionTags(e.target.value);
+                        handleUpdateSessionStatus({ tags: e.target.value.split(',').map(tag => tag.trim()) });
+                      }}
+                      placeholder="Add tags (comma separated)"
+                      className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
+                    />
+                  </div>
+                  
+                  <button
+                    onClick={() => setShowResolveModal(true)}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                  >
+                    <CheckCircle className="w-4 h-4 inline mr-2" />
+                    Mark Resolved
+                  </button>
+                </div>
+              </div>
+
+              {/* Messages */}
+              <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                {selectedSession.messages?.map((message, index) => (
+                  <div key={index} className={`flex ${message.role === 'user' || message.role === 'agent' ? 'justify-end' : 'justify-start'}`}>
+                    <div className="flex items-start gap-4 max-w-[85%]">
+                      {(message.role === 'bot' || message.role === 'system') && (
+                        <div className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
+                          {message.role === 'system' ? (
+                            <CheckCircle className="w-4 h-4 text-green-600" />
+                          ) : (
+                            <Bot className="w-4 h-4 text-gray-600" />
+                          )}
+                        </div>
+                      )}
+
+                      <div className={`flex flex-col ${(message.role === 'user' || message.role === 'agent') ? 'items-end' : 'items-start'}`}>
+                        {editingMessageId === message._id ? (
+                          <div className="w-full">
+                            <textarea
+                              value={editedContent}
+                              onChange={(e) => setEditedContent(e.target.value)}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 resize-none"
+                              rows={3}
+                            />
+                            <div className="flex gap-2 mt-2">
+                              <button
+                                onClick={saveEdit}
+                                className="px-3 py-1 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={cancelEditing}
+                                className="px-3 py-1 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 text-sm"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div
+                            className={`rounded-lg px-4 py-3 border ${
+                              message.role === 'user' || message.role === 'agent'
+                                ? 'bg-gray-900 text-white border-gray-900'
+                                : message.role === 'system'
+                                  ? 'bg-green-50 text-green-800 border-green-200'
+                                  : 'bg-white text-gray-900 border-gray-200'
+                            }`}
+                          >
+                            <p className="leading-relaxed">{message.content}</p>
+                            {message.role !== 'system' && (
+                              <button
+                                onClick={() => startEditing(message)}
+                                className="mt-2 text-xs text-gray-500 hover:text-gray-700"
+                              >
+                                Edit
+                              </button>
+                            )}
+                          </div>
+                        )}
+                        <div className="mt-2 text-xs text-gray-500">
+                          <span>{formatTimestamp(message.timestamp)}</span>
+                          {(message.role === 'user' || message.role === 'agent') && <span className="text-green-500 ml-1">✓</span>}
+                        </div>
+                      </div>
+
+                      {(message.role === 'user' || message.role === 'agent') && (
+                        <div className="w-8 h-8 rounded-lg bg-gray-900 flex items-center justify-center">
+                          <User className="w-4 h-4 text-white" />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Input Area */}
+              <div className="p-6 border-t border-gray-200 bg-white">
+                <form onSubmit={handleSendMessage} className="flex items-end gap-4">
+                  <div className="flex-1 relative">
+                    <textarea
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      placeholder="Type your message..."
+                      rows={1}
+                      className="w-full px-4 py-3 pr-16 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent resize-none"
+                      style={{
+                        minHeight: '48px',
+                        maxHeight: '120px'
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          handleSendMessage(e);
+                        }
+                      }}
+                    />
+                    <div className="absolute right-4 bottom-3 text-xs text-gray-500">
+                      {newMessage.length}/500
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    className={`p-3 rounded-lg transition-all ${
+                      !newMessage.trim()
+                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                        : 'bg-gray-900 text-white hover:bg-gray-800'
+                    }`}
+                    disabled={!newMessage.trim()}
+                  >
+                    <Send className="w-5 h-5" />
+                  </button>
+                </form>
+
+                <div className="flex items-center justify-between mt-3 text-xs text-gray-500">
+                  <span>Press Enter to send, Shift + Enter for new line</span>
+                  <span>Agent support interface</span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center bg-gray-50">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-4 border border-gray-200">
+                  <MessageSquare className="w-8 h-8 text-gray-400" />
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">No Session Selected</h3>
+                <p className="text-gray-500">Select a conversation from the sidebar to start managing support</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
