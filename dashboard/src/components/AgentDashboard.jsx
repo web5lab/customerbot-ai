@@ -58,6 +58,7 @@ export function AgentDashboard({ botId, onSessionSelect }) {
       socketService.on('all-sessions-update', (data) => {
         setAllSessions(data.sessions || []);
       });
+
       // Listen for session taken by other agents
       socketService.on('session-taken', (data) => {
         setSupportQueue(prev => prev.filter(s => s.sessionId !== data.sessionId));
@@ -110,6 +111,7 @@ export function AgentDashboard({ botId, onSessionSelect }) {
       fetchActiveSessions();
       fetchSupportQueue();
       fetchAllSessions();
+
       return () => {
         socketService.removeAllListeners();
       };
@@ -160,7 +162,7 @@ export function AgentDashboard({ botId, onSessionSelect }) {
       console.error('Error fetching support queue:', error);
     }
   };
-  const handleTakeSession = async (sessionId) => {
+
   const fetchAllSessions = async () => {
     try {
       const token = localStorage.getItem('authToken');
@@ -182,7 +184,7 @@ export function AgentDashboard({ botId, onSessionSelect }) {
   const handleJoinSession = async (session) => {
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/chat/session/${session._id}/join-agent`, {
+      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/chat/session/${session._id}/assign-agent`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -236,6 +238,7 @@ export function AgentDashboard({ botId, onSessionSelect }) {
       console.error('Error taking session:', error);
     }
   };
+
   const formatTime = (timestamp) => {
     return new Date(timestamp).toLocaleTimeString([], { 
       hour: '2-digit', 
@@ -349,6 +352,7 @@ export function AgentDashboard({ botId, onSessionSelect }) {
           </div>
         </div>
       )}
+
       {/* Support Queue */}
       {supportQueue.length > 0 && (
         <div className="mb-6">
