@@ -17,7 +17,7 @@ import {
   Check,
   Sparkles,
   Crown,
-  Zap
+  Zap,
   UserCheck
 } from 'lucide-react';
 import logo from "../assets/logo.png"
