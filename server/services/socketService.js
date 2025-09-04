@@ -24,10 +24,14 @@ export const initializeSocket = (server) => {
                 const user = await User.findById(decoded.userId || decoded.id);
                 socket.userId = user._id.toString();
                 socket.user = user;
+                socket.isAuthenticated = true;
+            } else {
+                socket.isAuthenticated = false;
             }
             next();
         } catch (err) {
             // Allow anonymous connections for public chat
+            socket.isAuthenticated = false;
             next();
         }
     });
@@ -35,31 +39,43 @@ export const initializeSocket = (server) => {
     io.on('connection', (socket) => {
         console.log(`Socket connected: ${socket.id}, User: ${socket.userId || 'Anonymous'}`);
 
-        // Join session room
+        // Join session room as customer
         socket.on('join-session', async (data) => {
             const { sessionId, botId } = data;
             
             try {
-                const session = await Session.findById(sessionId);
+                let session = await Session.findById(sessionId);
                 if (!session) {
-                    socket.emit('error', { message: 'Session not found' });
-                    return;
+                    // Create new session for anonymous users
+                    session = new Session({
+                        botId,
+                        title: `Chat Session ${Date.now()}`,
+                        lastMessage: 'Session started',
+                        messages: [],
+                        messageCount: 0,
+                        status: 'active'
+                    });
+                    await session.save();
                 }
 
-                socket.sessionId = sessionId;
+                socket.sessionId = sessionId || session._id;
                 socket.botId = botId;
-                socket.join(`session-${sessionId}`);
+                socket.join(`session-${socket.sessionId}`);
+                socket.join(`bot-${botId}-customers`);
                 
-                console.log(`Socket ${socket.id} joined session ${sessionId}`);
+                console.log(`Customer socket ${socket.id} joined session ${socket.sessionId}`);
                 
-                // Notify support agents that a customer is in the session
-                if (!socket.userId) {
-                    socket.to(`bot-${botId}-agents`).emit('customer-joined', {
-                        sessionId,
-                        customerSocketId: socket.id,
-                        timestamp: new Date()
-                    });
-                }
+                // Notify agents that a customer is active
+                socket.to(`bot-${botId}-agents`).emit('customer-online', {
+                    sessionId: socket.sessionId,
+                    customerSocketId: socket.id,
+                    timestamp: new Date()
+                });
+
+                socket.emit('session-joined', { 
+                    sessionId: socket.sessionId,
+                    session 
+                });
             } catch (error) {
                 console.error('Error joining session:', error);
                 socket.emit('error', { message: 'Failed to join session' });
@@ -70,7 +86,7 @@ export const initializeSocket = (server) => {
         socket.on('join-as-agent', async (data) => {
             const { botId } = data;
             
-            if (!socket.userId) {
+            if (!socket.isAuthenticated) {
                 socket.emit('error', { message: 'Authentication required for agents' });
                 return;
             }
@@ -84,7 +100,7 @@ export const initializeSocket = (server) => {
                 });
 
                 if (!team) {
-                    socket.emit('error', { message: 'Access denied' });
+                    socket.emit('error', { message: 'Access denied to this bot' });
                     return;
                 }
 
@@ -92,23 +108,34 @@ export const initializeSocket = (server) => {
                 socket.join(`bot-${botId}-agents`);
                 socket.isAgent = true;
                 
-                console.log(`Agent ${socket.user.name} joined bot ${botId}`);
+                console.log(`Agent ${socket.user.name} joined bot ${botId} support`);
                 
+                // Send current support queue
+                const pendingSessions = await Session.find({
+                    botId,
+                    needsHumanSupport: true,
+                    status: 'pending',
+                    assignedAgent: null
+                }).sort({ humanSupportRequestedAt: 1 });
+
+                socket.emit('support-queue-update', { 
+                    sessions: pendingSessions.map(session => ({
+                        sessionId: session._id,
+                        title: session.title,
+                        customerMessage: session.lastMessage,
+                        customerName: session.customerName,
+                        customerEmail: session.customerEmail,
+                        timestamp: session.humanSupportRequestedAt,
+                        priority: session.priority || 'medium'
+                    }))
+                });
+
                 // Notify other agents
-                socket.to(`bot-${botId}-agents`).emit('agent-joined', {
+                socket.to(`bot-${botId}-agents`).emit('agent-online', {
                     agentId: socket.userId,
                     agentName: socket.user.name,
                     timestamp: new Date()
                 });
-
-                // Send list of active sessions needing support
-                const activeSessions = await Session.find({
-                    botId,
-                    status: { $in: ['active', 'pending'] },
-                    needsHumanSupport: true
-                }).populate('assignedAgent', 'name email');
-
-                socket.emit('active-support-sessions', { sessions: activeSessions });
                 
             } catch (error) {
                 console.error('Error joining as agent:', error);
@@ -116,9 +143,9 @@ export const initializeSocket = (server) => {
             }
         });
 
-        // Request human support
+        // Customer requests human support
         socket.on('request-human-support', async (data) => {
-            const { sessionId, message } = data;
+            const { sessionId, message, customerInfo } = data;
             
             try {
                 const session = await Session.findById(sessionId);
@@ -127,42 +154,54 @@ export const initializeSocket = (server) => {
                     return;
                 }
 
-                // Update session to indicate human support is needed
+                // Update session
                 session.needsHumanSupport = true;
                 session.status = 'pending';
                 session.humanSupportRequestedAt = new Date();
+                session.lastActivity = new Date();
                 
-                // Add system message about human support request
+                // Update customer info if provided
+                if (customerInfo) {
+                    if (customerInfo.name) session.customerName = customerInfo.name;
+                    if (customerInfo.email) session.customerEmail = customerInfo.email;
+                    if (customerInfo.phone) session.customerPhone = customerInfo.phone;
+                    if (customerInfo.company) session.customerCompany = customerInfo.company;
+                }
+
+                // Add system message
                 session.messages.push({
                     role: 'system',
                     content: 'Customer has requested human support. An agent will join shortly.',
                     timestamp: new Date()
                 });
 
-                if (message) {
+                // Add customer message if provided
+                if (message && message !== 'Customer requested human support') {
                     session.messages.push({
                         role: 'user',
                         content: message,
                         timestamp: new Date()
                     });
+                    session.lastMessage = message;
                 }
 
                 session.messageCount = session.messages.length;
-                session.lastMessage = message || 'Requested human support';
                 await session.save();
 
                 // Notify all agents for this bot
                 io.to(`bot-${session.botId}-agents`).emit('support-request', {
                     sessionId,
                     customerMessage: message,
+                    customerInfo,
                     session: {
                         _id: session._id,
                         title: session.title,
                         lastMessage: session.lastMessage,
                         messageCount: session.messageCount,
                         timestamp: session.timestamp,
-                        needsHumanSupport: true,
-                        status: 'pending'
+                        customerName: session.customerName,
+                        customerEmail: session.customerEmail,
+                        priority: session.priority || 'medium'
                     },
                     timestamp: new Date()
                 });
@@ -170,8 +209,11 @@ export const initializeSocket = (server) => {
                 // Confirm to customer
                 socket.emit('support-requested', {
                     message: 'Your request for human support has been received. An agent will join shortly.',
-                    estimatedWaitTime: '2-5 minutes'
+                    estimatedWaitTime: '2-5 minutes',
+                    sessionId
                 });
+
+                console.log(`Human support requested for session ${sessionId}`);
 
             } catch (error) {
                 console.error('Error requesting human support:', error);
@@ -183,8 +225,8 @@ export const initializeSocket = (server) => {
         socket.on('take-session', async (data) => {
             const { sessionId } = data;
             
-            if (!socket.isAgent) {
-                socket.emit('error', { message: 'Only agents can take sessions' });
+            if (!socket.isAgent || !socket.isAuthenticated) {
+                socket.emit('error', { message: 'Only authenticated agents can take sessions' });
                 return;
             }
 
@@ -195,10 +237,17 @@ export const initializeSocket = (server) => {
                     return;
                 }
 
+                // Check if session is already assigned
+                if (session.assignedAgent) {
+                    socket.emit('error', { message: 'Session already assigned to another agent' });
+                    return;
+                }
+
                 // Assign agent to session
                 session.assignedAgent = socket.userId;
                 session.status = 'active';
                 session.agentJoinedAt = new Date();
+                session.lastActivity = new Date();
                 
                 // Add system message
                 session.messages.push({
@@ -212,6 +261,7 @@ export const initializeSocket = (server) => {
 
                 // Join the specific session room
                 socket.join(`session-${sessionId}`);
+                socket.activeSessionId = sessionId;
 
                 // Notify customer that agent has joined
                 socket.to(`session-${sessionId}`).emit('agent-joined', {
@@ -225,10 +275,20 @@ export const initializeSocket = (server) => {
                 socket.to(`bot-${session.botId}-agents`).emit('session-taken', {
                     sessionId,
                     agentName: socket.user.name,
-                    agentId: socket.userId
+                    agentId: socket.userId,
+                    timestamp: new Date()
                 });
 
-                socket.emit('session-assigned', { sessionId, session });
+                // Send session data to agent
+                socket.emit('session-assigned', { 
+                    sessionId, 
+                    session: {
+                        ...session.toObject(),
+                        messages: session.messages.slice(-50) // Last 50 messages
+                    }
+                });
+
+                console.log(`Agent ${socket.user.name} took session ${sessionId}`);
 
             } catch (error) {
                 console.error('Error taking session:', error);
@@ -244,6 +304,17 @@ export const initializeSocket = (server) => {
                 const session = await Session.findById(sessionId);
                 if (!session) {
                     socket.emit('error', { message: 'Session not found' });
+                    return;
+                }
+
+                // Verify permissions
+                if (isAgent && (!socket.isAgent || !socket.isAuthenticated)) {
+                    socket.emit('error', { message: 'Agent authentication required' });
+                    return;
+                }
+
+                if (isAgent && session.assignedAgent?.toString() !== socket.userId) {
+                    socket.emit('error', { message: 'You are not assigned to this session' });
                     return;
                 }
 
@@ -269,18 +340,21 @@ export const initializeSocket = (server) => {
                     timestamp: new Date()
                 });
 
-                // If customer message and agent is assigned, notify the agent
+                // If customer message and agent is assigned, notify other agents
                 if (!isAgent && session.assignedAgent) {
-                    io.to(`bot-${session.botId}-agents`).emit('customer-message', {
+                    socket.to(`bot-${session.botId}-agents`).emit('customer-message', {
                         sessionId,
                         message: newMessage,
                         session: {
                             _id: session._id,
                             title: session.title,
-                            lastMessage: session.lastMessage
+                            lastMessage: session.lastMessage,
+                            customerName: session.customerName
                         }
                     });
                 }
+
+                console.log(`Message sent in session ${sessionId} by ${isAgent ? 'agent' : 'customer'}`);
 
             } catch (error) {
                 console.error('Error sending message:', error);
@@ -288,22 +362,27 @@ export const initializeSocket = (server) => {
             }
         });
 
-        // Agent typing indicator
-        socket.on('agent-typing', (data) => {
-            const { sessionId, isTyping } = data;
-            socket.to(`session-${sessionId}`).emit('agent-typing', {
-                agentName: socket.user?.name,
-                isTyping,
+        // Typing indicators
+        socket.on('typing-start', (data) => {
+            const { sessionId, isAgent = false } = data;
+            const eventName = isAgent ? 'agent-typing' : 'customer-typing';
+            
+            socket.to(`session-${sessionId}`).emit(eventName, {
+                sessionId,
+                senderName: socket.user?.name || 'Customer',
+                isTyping: true,
                 timestamp: new Date()
             });
         });
 
-        // Customer typing indicator
-        socket.on('customer-typing', (data) => {
-            const { sessionId, isTyping } = data;
-            socket.to(`bot-${sessionId}-agents`).emit('customer-typing', {
+        socket.on('typing-stop', (data) => {
+            const { sessionId, isAgent = false } = data;
+            const eventName = isAgent ? 'agent-typing' : 'customer-typing';
+            
+            socket.to(`session-${sessionId}`).emit(eventName, {
                 sessionId,
-                isTyping,
+                senderName: socket.user?.name || 'Customer',
+                isTyping: false,
                 timestamp: new Date()
             });
         });
@@ -312,7 +391,7 @@ export const initializeSocket = (server) => {
         socket.on('resolve-session', async (data) => {
             const { sessionId, rating, feedback } = data;
             
-            if (!socket.isAgent) {
+            if (!socket.isAgent || !socket.isAuthenticated) {
                 socket.emit('error', { message: 'Only agents can resolve sessions' });
                 return;
             }
@@ -321,6 +400,11 @@ export const initializeSocket = (server) => {
                 const session = await Session.findById(sessionId);
                 if (!session) {
                     socket.emit('error', { message: 'Session not found' });
+                    return;
+                }
+
+                if (session.assignedAgent?.toString() !== socket.userId) {
+                    socket.emit('error', { message: 'You can only resolve sessions assigned to you' });
                     return;
                 }
 
@@ -354,12 +438,100 @@ export const initializeSocket = (server) => {
                 // Notify other agents
                 socket.to(`bot-${session.botId}-agents`).emit('session-resolved-update', {
                     sessionId,
-                    resolvedBy: socket.user.name
+                    resolvedBy: socket.user.name,
+                    timestamp: new Date()
                 });
+
+                console.log(`Session ${sessionId} resolved by ${socket.user.name}`);
 
             } catch (error) {
                 console.error('Error resolving session:', error);
                 socket.emit('error', { message: 'Failed to resolve session' });
+            }
+        });
+
+        // Get active sessions for agent
+        socket.on('get-active-sessions', async (data) => {
+            const { botId } = data;
+            
+            if (!socket.isAgent || !socket.isAuthenticated) {
+                socket.emit('error', { message: 'Agent authentication required' });
+                return;
+            }
+
+            try {
+                const activeSessions = await Session.find({
+                    botId,
+                    assignedAgent: socket.userId,
+                    status: 'active'
+                }).sort({ lastActivity: -1 });
+
+                socket.emit('active-sessions-update', { sessions: activeSessions });
+            } catch (error) {
+                console.error('Error fetching active sessions:', error);
+                socket.emit('error', { message: 'Failed to fetch active sessions' });
+            }
+        });
+
+        // Transfer session to another agent
+        socket.on('transfer-session', async (data) => {
+            const { sessionId, targetAgentId, reason } = data;
+            
+            if (!socket.isAgent || !socket.isAuthenticated) {
+                socket.emit('error', { message: 'Agent authentication required' });
+                return;
+            }
+
+            try {
+                const session = await Session.findById(sessionId);
+                if (!session || session.assignedAgent?.toString() !== socket.userId) {
+                    socket.emit('error', { message: 'Session not found or not assigned to you' });
+                    return;
+                }
+
+                const targetAgent = await User.findById(targetAgentId);
+                if (!targetAgent) {
+                    socket.emit('error', { message: 'Target agent not found' });
+                    return;
+                }
+
+                // Update session
+                session.assignedAgent = targetAgentId;
+                session.lastActivity = new Date();
+                
+                // Add transfer message
+                session.messages.push({
+                    role: 'system',
+                    content: `Session transferred from ${socket.user.name} to ${targetAgent.name}${reason ? `: ${reason}` : ''}`,
+                    timestamp: new Date()
+                });
+
+                session.messageCount = session.messages.length;
+                await session.save();
+
+                // Notify all participants
+                io.to(`session-${sessionId}`).emit('session-transferred', {
+                    sessionId,
+                    fromAgent: socket.user.name,
+                    toAgent: targetAgent.name,
+                    reason,
+                    timestamp: new Date()
+                });
+
+                // Notify agents
+                socket.to(`bot-${session.botId}-agents`).emit('session-transfer-update', {
+                    sessionId,
+                    fromAgentId: socket.userId,
+                    toAgentId: targetAgentId,
+                    fromAgent: socket.user.name,
+                    toAgent: targetAgent.name
+                });
+
+                console.log(`Session ${sessionId} transferred from ${socket.user.name} to ${targetAgent.name}`);
+
+            } catch (error) {
+                console.error('Error transferring session:', error);
+                socket.emit('error', { message: 'Failed to transfer session' });
             }
         });
 
@@ -368,9 +540,16 @@ export const initializeSocket = (server) => {
             console.log(`Socket disconnected: ${socket.id}`);
             
             if (socket.isAgent && socket.botId) {
-                socket.to(`bot-${socket.botId}-agents`).emit('agent-left', {
+                socket.to(`bot-${socket.botId}-agents`).emit('agent-offline', {
                     agentId: socket.userId,
                     agentName: socket.user?.name,
+                    timestamp: new Date()
+                });
+            }
+
+            if (socket.sessionId && socket.botId) {
+                socket.to(`bot-${socket.botId}-agents`).emit('customer-offline', {
+                    sessionId: socket.sessionId,
                     timestamp: new Date()
                 });
             }
@@ -391,11 +570,20 @@ export const getIO = () => {
 export const notifyAgents = (botId, event, data) => {
     if (io) {
         io.to(`bot-${botId}-agents`).emit(event, data);
+        console.log(`Notified agents for bot ${botId} with event: ${event}`);
     }
 };
 
 export const notifySession = (sessionId, event, data) => {
     if (io) {
         io.to(`session-${sessionId}`).emit(event, data);
+        console.log(`Notified session ${sessionId} with event: ${event}`);
+    }
+};
+
+export const notifyCustomers = (botId, event, data) => {
+    if (io) {
+        io.to(`bot-${botId}-customers`).emit(event, data);
+        console.log(`Notified customers for bot ${botId} with event: ${event}`);
     }
 };

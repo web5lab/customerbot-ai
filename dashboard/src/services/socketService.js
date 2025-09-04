@@ -93,8 +93,8 @@ class SocketService {
     sendTyping(sessionId, isTyping, isAgent = false) {
         if (!this.socket) return;
         
-        const event = isAgent ? 'agent-typing' : 'customer-typing';
-        this.socket.emit(event, { sessionId, isTyping });
+        const event = isTyping ? 'typing-start' : 'typing-stop';
+        this.socket.emit(event, { sessionId, isAgent });
     }
 
     // Resolve session
@@ -105,6 +105,24 @@ class SocketService {
             sessionId, 
             rating, 
             feedback 
+        });
+    }
+
+    // Get active sessions (for agents)
+    getActiveSessions(botId) {
+        if (!this.socket) return;
+        
+        this.socket.emit('get-active-sessions', { botId });
+    }
+
+    // Transfer session to another agent
+    transferSession(sessionId, targetAgentId, reason = null) {
+        if (!this.socket) return;
+        
+        this.socket.emit('transfer-session', { 
+            sessionId, 
+            targetAgentId, 
+            reason 
         });
     }
 
