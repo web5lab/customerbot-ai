@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import { setUiConfig } from '../store/global.Slice';
 import { uiConfigSelector, activeBotSelector } from '../store/global.Selctor';
-import { updateChatBot } from '../store/global.Action';
+import { updateChatBot, getDashboardStats } from '../store/global.Action';
 
 const colorPalettes = [
   { name: 'Ocean Blue', primary: '#0ea5e9', secondary: '#0284c7', bg: '#f0f9ff' },
