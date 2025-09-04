@@ -49,6 +49,7 @@ export function Dashboard() {
       change: dashboardStats?.growth?.users || '+0%',
       changeType: 'positive'
     }
+  ];
 
   // Generate recent activities from real data
   const recentActivities = dashboardStats?.recentActivity || [
