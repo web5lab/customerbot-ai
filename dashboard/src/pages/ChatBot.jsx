@@ -318,29 +318,29 @@ const ChatWidget = () => {
     : [];
 
   return (
-    <div className="w-full h-[100vh] bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 flex flex-col overflow-hidden transform transition-all duration-500 ease-in-out scale-100 opacity-100 origin-bottom-right relative">
+    <div className="w-full h-[100vh] flex flex-col overflow-hidden transform transition-all duration-500 ease-in-out scale-100 opacity-100 origin-bottom-right relative" style={{ background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #f0f4ff 100%)' }}>
       
       {/* Background Effects */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-1/4 -right-1/4 w-64 h-64 bg-gradient-to-br from-blue-400/20 to-indigo-600/20 rounded-full blur-3xl animate-pulse"></div>
-        <div className="absolute -bottom-1/4 -left-1/4 w-64 h-64 bg-gradient-to-tr from-purple-400/20 to-pink-600/20 rounded-full blur-3xl animate-pulse" style={{animationDelay: '2s'}}></div>
+        <div className="absolute top-1/4 -right-1/4 w-64 h-64 rounded-full blur-3xl animate-pulse" style={{ background: 'radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, rgba(99, 102, 241, 0.1) 100%)' }}></div>
+        <div className="absolute -bottom-1/4 -left-1/4 w-64 h-64 rounded-full blur-3xl animate-pulse" style={{ background: 'radial-gradient(circle, rgba(139, 92, 246, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%)', animationDelay: '2s' }}></div>
       </div>
 
       {/* Enhanced Header */}
-      <div className="bg-gray-900 px-6 py-4 text-white border-b border-gray-700">
+      <div className="px-6 py-4 text-white border-b-2" style={{ backgroundColor: '#1f2937', borderColor: '#3B82F6' }}>
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4 flex-1 min-w-0">
             <div className="relative">
-              <div className="w-12 h-12 bg-gray-700 rounded-lg flex items-center justify-center border border-gray-600">
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center border-2" style={{ backgroundColor: '#374151', borderColor: '#3B82F6' }}>
                 {currentAgent.includes('AI') || currentAgent === 'Connecting...' ? (
                   <div className="relative">
                     <Bot className="w-6 h-6 text-white" />
-                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse border border-white"></div>
+                    <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse border border-white" style={{ backgroundColor: '#3B82F6' }}></div>
                   </div>
                 ) : (
                   <div className="relative">
                     <User className="w-6 h-6 text-white" />
-                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-pulse border border-white"></div>
+                    <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full animate-pulse border border-white" style={{ backgroundColor: '#3B82F6' }}></div>
                   </div>
                 )}
               </div>
@@ -351,8 +351,8 @@ const ChatWidget = () => {
               
               </div>
               <div className="flex items-center space-x-2 text-sm">
-                <div className={`w-2 h-2 rounded-full ${isTransferring ? 'bg-yellow-400' : 'bg-green-400'}`}></div>
-                <span className="text-gray-300 font-medium">{isTransferring ? 'Connecting...' : 'Online'}</span>
+                <div className={`w-2 h-2 rounded-full`} style={{ backgroundColor: isTransferring ? '#fbbf24' : '#3B82F6' }}></div>
+                <span className="font-medium" style={{ color: '#e5e7eb' }}>{isTransferring ? 'Connecting...' : 'Online'}</span>
                
               </div>
             </div>
@@ -360,14 +360,16 @@ const ChatWidget = () => {
           <div className="flex items-center space-x-3 pl-4 flex-shrink-0">
             <button
               onClick={() => clearChat()}
-              className="w-10 h-10 bg-gray-700 hover:bg-gray-600 rounded-lg flex items-center justify-center transition-colors border border-gray-600"
+              className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors border-2 hover:opacity-80"
+              style={{ backgroundColor: '#374151', borderColor: '#3B82F6' }}
               title="Clear chat"
             >
               <RotateCcw className="w-5 h-5 text-white" />
             </button>
             <button
               onClick={() => emitCloseEvent()}
-              className="w-10 h-10 bg-red-600 hover:bg-red-700 rounded-lg flex items-center justify-center transition-colors border border-red-500"
+              className="w-10 h-10 rounded-lg flex items-center justify-center transition-colors border-2 hover:opacity-80"
+              style={{ backgroundColor: '#dc2626', borderColor: '#ef4444' }}
               title="Close chat"
             >
               <X className="w-5 h-5 text-white" />
@@ -379,7 +381,8 @@ const ChatWidget = () => {
       {/* Enhanced Message Container */}
       <div
         ref={chatContainerRef}
-        className="flex-1 p-6 space-y-4 overflow-y-auto bg-gray-50"
+        className="flex-1 p-6 space-y-4 overflow-y-auto"
+        style={{ backgroundColor: '#f8fafc' }}
         style={{
           scrollbarWidth: 'thin',
           scrollbarColor: 'rgba(156, 163, 175, 0.3) transparent'
@@ -390,7 +393,7 @@ const ChatWidget = () => {
             {/* System Message */}
             {msg.type === 'system' ? (
               <div className="flex justify-center">
-                <div className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium border border-green-500">
+                <div className="text-white px-4 py-2 rounded-lg text-sm font-medium border-2" style={{ backgroundColor: '#10b981', borderColor: '#059669' }}>
                   <div className="flex items-center gap-2">
                     <CheckCircle className="w-4 h-4" />
                     {msg.message}
@@ -402,21 +405,27 @@ const ChatWidget = () => {
                 <div className="max-w-[80%]">
                   {/* Agent name above bot messages */}
                   {msg.type === 'bot' && msg.agent && msg.agent !== currentAgent && msg.agent !== 'AI Assistant' && msg.agent !== 'System' && !isTransferring && (
-                    <div className="text-xs text-gray-600 mb-1 px-2 font-medium">
+                    <div className="text-xs mb-1 px-2 font-medium" style={{ color: '#6b7280' }}>
                       {msg.agent}
                     </div>
                   )}
                   <div className="relative">
                     <div
-                      className={`px-4 py-3 rounded-lg border transition-all ${
+                      className={`px-4 py-3 rounded-lg border-2 transition-all ${
                         msg.type === 'user'
-                          ? 'bg-gray-900 text-white border-gray-900'
-                          : 'bg-white text-gray-900 border-gray-200'
+                          ? 'text-white'
+                          : 'bg-white text-gray-900'
                       }`}
+                      style={msg.type === 'user' ? {
+                        backgroundColor: '#3B82F6',
+                        borderColor: '#3B82F6'
+                      } : {
+                        borderColor: '#3B82F6'
+                      }}
                     >
                       <p className="text-sm leading-relaxed font-medium">{msg.message}</p>
                       <p className={`text-xs mt-2 text-right ${
-                        msg.type === 'user' ? 'text-gray-300' : 'text-gray-500'
+                        msg.type === 'user' ? 'text-blue-100' : 'text-gray-500'
                       }`}>
                         {formatTime(msg.timestamp)}
                       </p>
@@ -432,15 +441,15 @@ const ChatWidget = () => {
         {isTyping && (
           <div className="flex justify-start">
             <div className="max-w-[80%]">
-              <div className="text-xs text-gray-600 mb-1 px-2 font-medium flex items-center gap-2">
+              <div className="text-xs mb-1 px-2 font-medium flex items-center gap-2" style={{ color: '#6b7280' }}>
                 <Bot className="w-3 h-3" />
                 {currentAgent}
               </div>
-              <div className="bg-white rounded-lg px-4 py-3 border border-gray-200">
+              <div className="bg-white rounded-lg px-4 py-3 border-2" style={{ borderColor: '#3B82F6' }}>
                 <div className="flex space-x-2">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-100"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce delay-200"></div>
+                  <div className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: '#3B82F6' }}></div>
+                  <div className="w-2 h-2 rounded-full animate-bounce delay-100" style={{ backgroundColor: '#3B82F6' }}></div>
+                  <div className="w-2 h-2 rounded-full animate-bounce delay-200" style={{ backgroundColor: '#3B82F6' }}></div>
                 </div>
               </div>
             </div>
@@ -454,7 +463,11 @@ const ChatWidget = () => {
               <button
                 key={index}
                 onClick={() => handleQuickReply(reply)}
-                className="px-4 py-2 bg-white border border-gray-200 text-gray-700 text-sm rounded-lg hover:bg-gray-100 hover:border-gray-300 transition-all font-medium"
+                className="px-4 py-2 bg-white border-2 text-sm rounded-lg transition-all font-medium hover:opacity-80"
+                style={{ 
+                  borderColor: '#3B82F6',
+                  color: '#3B82F6'
+                }}
               >
                 <span className="flex items-center gap-2">
                   {reply}
@@ -481,7 +494,8 @@ const ChatWidget = () => {
           </div>
           <button
             onClick={handleChatSubmit}
-            className="w-12 h-12 flex items-center justify-center bg-gray-900 hover:bg-gray-800 text-white rounded-lg transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+            className="w-12 h-12 flex items-center justify-center text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-80"
+            style={{ backgroundColor: !currentMessage.trim() || isTransferring ? '#d1d5db' : '#3B82F6' }}
             disabled={!currentMessage.trim() || isTransferring}
           >
             <Send className="w-5 h-5" />

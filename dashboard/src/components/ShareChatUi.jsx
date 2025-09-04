@@ -79,7 +79,6 @@ export const ShareChatUI = () => {
     const [customPrimaryColor, setCustomPrimaryColor] = useState();
     const [customSecondaryColor, setCustomSecondaryColor] = useState();
     const [customBgColor, setCustomBgColor] = useState();
-    const [themeMode, setThemeMode] = useState();
     const [botAvatar, setBotAvatar] = useState();
     const [userAvatar, setUserAvatar] = useState();
     const [selectedFontSize, setSelectedFontSize] = useState();
@@ -105,7 +104,6 @@ export const ShareChatUI = () => {
                     setCustomPrimaryColor(data.primaryColour);
                     setCustomSecondaryColor(data.secondaryColour);
                     setCustomBgColor(data.backgroundColour);
-                    setThemeMode(data.themeMode);
                     setBotAvatar(data.icon);
                     setUserAvatar(data.userIcon);
                     setSelectedFontSize(data.typography);
@@ -165,30 +163,30 @@ export const ShareChatUI = () => {
             {isLoading ? (<LoadingScreen />) : (
                 <div className="h-screen w-screen bg-white flex flex-col">
                     {/* Header */}
-                    <div className="bg-gray-50 p-6 border-b border-gray-200">
+                    <div className="p-6 border-b border-gray-200" style={{ backgroundColor: customBgColor || '#f0f9ff' }}>
                         <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
+                            <div className="w-10 h-10 rounded-lg border-2 flex items-center justify-center" style={{ backgroundColor: customSecondaryColor || '#1c1d1d', borderColor: customPrimaryColor || '#3B82F6' }}>
                                 {botAvatar ? (
                                     <img src={botAvatar} alt="Bot" className="w-8 h-8 rounded-lg object-cover" />
                                 ) : (
-                                    <Bot className="w-5 h-5 text-gray-600" />
+                                    <Bot className="w-5 h-5 text-white" />
                                 )}
                             </div>
                             <div>
-                                <h2 className="text-gray-900 font-semibold">{botName || 'AI Assistant'}</h2>
-                                <div className="flex items-center gap-2 text-gray-600 text-sm">
+                                <h2 className="font-semibold" style={{ color: customPrimaryColor || '#3B82F6' }}>{botName || 'AI Assistant'}</h2>
+                                <div className="flex items-center gap-2 text-sm" style={{ color: customSecondaryColor || '#1c1d1d' }}>
                                     {isTyping ? (
                                         <>
                                             <div className="flex space-x-1">
-                                                <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce"></div>
-                                                <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                                                <div className="w-1 h-1 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                                                <div className="w-1 h-1 rounded-full animate-bounce" style={{ backgroundColor: customPrimaryColor || '#3B82F6' }}></div>
+                                                <div className="w-1 h-1 rounded-full animate-bounce" style={{ backgroundColor: customPrimaryColor || '#3B82F6', animationDelay: '150ms' }}></div>
+                                                <div className="w-1 h-1 rounded-full animate-bounce" style={{ backgroundColor: customPrimaryColor || '#3B82F6', animationDelay: '300ms' }}></div>
                                             </div>
                                             <span>Typing...</span>
                                         </>
                                     ) : (
                                         <>
-                                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: customPrimaryColor || '#3B82F6' }}></div>
                                             <span>Online</span>
                                         </>
                                     )}
@@ -204,36 +202,42 @@ export const ShareChatUI = () => {
                                 <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                     <div className="flex items-start gap-4 max-w-[85%]">
                                         {message.role === 'bot' && (
-                                            <div className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
+                                            <div className="w-8 h-8 rounded-lg border-2 flex items-center justify-center" style={{ backgroundColor: customSecondaryColor || '#1c1d1d', borderColor: customPrimaryColor || '#3B82F6' }}>
                                                 {botAvatar ? (
                                                     <img src={botAvatar} alt="Bot" className="w-6 h-6 rounded-lg object-cover" />
                                                 ) : (
-                                                    <Bot className="w-4 h-4 text-gray-600" />
+                                                    <Bot className="w-4 h-4 text-white" />
                                                 )}
                                             </div>
                                         )}
 
                                         <div className={`flex flex-col ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
                                             <div
-                                                className={`rounded-lg px-4 py-3 border ${
+                                                className={`rounded-lg px-4 py-3 border-2 ${
                                                     message.role === 'user'
-                                                        ? 'bg-gray-900 text-white border-gray-900'
+                                                        ? 'text-white'
                                                         : message.isError 
-                                                            ? 'bg-red-50 text-red-800 border-red-200' 
-                                                            : 'bg-white text-gray-900 border-gray-200'
+                                                            ? 'bg-red-50 text-red-800 border-red-200'
+                                                            : 'bg-white text-gray-900'
                                                 }`}
+                                                style={message.role === 'user' ? {
+                                                    backgroundColor: customPrimaryColor || '#3B82F6',
+                                                    borderColor: customPrimaryColor || '#3B82F6'
+                                                } : message.isError ? {} : {
+                                                    borderColor: customPrimaryColor || '#3B82F6'
+                                                }}
                                                 style={{ fontSize: selectedFontSize }}
                                             >
                                                 <p className="leading-relaxed">{message.content}</p>
                                             </div>
                                             <div className="mt-2 text-xs text-gray-500">
                                                 <span>{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                {message.role === 'user' && <span className="text-green-500 ml-1">✓</span>}
+                                                {message.role === 'user' && <span className="ml-1" style={{ color: customPrimaryColor || '#3B82F6' }}>✓</span>}
                                             </div>
                                         </div>
 
                                         {message.role === 'user' && (
-                                            <div className="w-8 h-8 rounded-lg bg-gray-600 border border-gray-600 flex items-center justify-center">
+                                            <div className="w-8 h-8 rounded-lg border-2 flex items-center justify-center" style={{ backgroundColor: customSecondaryColor || '#1c1d1d', borderColor: customPrimaryColor || '#3B82F6' }}>
                                                 {userAvatar ? (
                                                     <img src={userAvatar} alt="User" className="w-6 h-6 rounded-lg object-cover" />
                                                 ) : (
@@ -248,21 +252,21 @@ export const ShareChatUI = () => {
                             {isTyping && (
                                 <div className="flex justify-start">
                                     <div className="flex items-start gap-4 max-w-[80%]">
-                                        <div className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
+                                        <div className="w-8 h-8 rounded-lg border-2 flex items-center justify-center" style={{ backgroundColor: customSecondaryColor || '#1c1d1d', borderColor: customPrimaryColor || '#3B82F6' }}>
                                             {botAvatar ? (
                                                 <img src={botAvatar} alt="Bot" className="w-6 h-6 rounded-lg object-cover" />
                                             ) : (
-                                                <Bot className="w-4 h-4 text-gray-600" />
+                                                <Bot className="w-4 h-4 text-white" />
                                             )}
                                         </div>
-                                        <div className="rounded-lg px-4 py-3 bg-white border border-gray-200">
+                                        <div className="rounded-lg px-4 py-3 bg-white border-2" style={{ borderColor: customPrimaryColor || '#3B82F6' }}>
                                             <div className="flex items-center gap-3">
                                                 <div className="flex space-x-1">
-                                                    <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"></div>
-                                                    <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                                                    <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                                                    <div className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: customPrimaryColor || '#3B82F6' }}></div>
+                                                    <div className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: customPrimaryColor || '#3B82F6', animationDelay: '150ms' }}></div>
+                                                    <div className="w-2 h-2 rounded-full animate-bounce" style={{ backgroundColor: customPrimaryColor || '#3B82F6', animationDelay: '300ms' }}></div>
                                                 </div>
-                                                <span className="text-sm italic text-gray-500">{thinkingMessage}</span>
+                                                <span className="text-sm italic" style={{ color: customSecondaryColor || '#1c1d1d' }}>{thinkingMessage}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -281,7 +285,12 @@ export const ShareChatUI = () => {
                                         key={index}
                                         type="button"
                                         onClick={() => setInputData(question)}
-                                        className="px-4 py-2 rounded-full text-sm font-medium border border-gray-200 text-gray-700 hover:bg-gray-50 transition-colors"
+                                        className="px-4 py-2 rounded-full text-sm font-medium border-2 transition-colors hover:opacity-80"
+                                        style={{ 
+                                            borderColor: customPrimaryColor || '#3B82F6',
+                                            color: customPrimaryColor || '#3B82F6',
+                                            backgroundColor: 'transparent'
+                                        }}
                                     >
                                         {question}
                                     </button>
@@ -315,11 +324,12 @@ export const ShareChatUI = () => {
                             </div>
                             <button
                                 type="submit"
-                                className={`p-3 rounded-lg transition-all ${
+                                className={`p-3 rounded-lg transition-all text-white ${
                                     isTyping || !input.trim()
-                                        ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                                        : 'bg-gray-900 text-white hover:bg-gray-800'
+                                        ? 'opacity-50 cursor-not-allowed'
+                                        : 'hover:opacity-80'
                                 }`}
+                                style={{ backgroundColor: isTyping || !input.trim() ? '#d1d5db' : (customPrimaryColor || '#3B82F6') }}
                                 disabled={isTyping || !input.trim()}
                             >
                                 {isTyping ? (

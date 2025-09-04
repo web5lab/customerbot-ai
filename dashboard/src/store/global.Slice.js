@@ -19,7 +19,6 @@ const initialState = {
     customPrimaryColor: '#3B82F6',
     customSecondaryColor: '#1c1d1d',
     customBgColor: '#f0f9ff',
-    themeMode: 'light',
     botAvatar: '',
     userAvatar: '',
     selectedFontSize: '16px',
@@ -88,7 +87,6 @@ export const globalSlice = createSlice({
         customPrimaryColor: '#3B82F6',
         customSecondaryColor: '#1c1d1d',
         customBgColor: '#f0f9ff',
-        themeMode: 'light',
         botAvatar: '',
         userAvatar: '',
         selectedFontSize: '16px',
@@ -146,7 +144,6 @@ export const globalSlice = createSlice({
       state.uiConfig.customPrimaryColor = action.payload.primaryColour || '#3B82F6';
       state.uiConfig.customSecondaryColor = action.payload.secondaryColour || '#1c1d1d';
       state.uiConfig.customBgColor = action.payload.backgroundColour || '#f0f9ff';
-      state.uiConfig.themeMode = action.payload.themeMode || 'light';
       state.uiConfig.userAvatar = action.payload.userIcon || 'https://arcai.fun/assets/logo-CrKFoPSZ.png';
       state.uiConfig.selectedFontSize = action.payload.typography; // Default font size
       state.uiConfig.welcomeMessage = action.payload.welcomeMessage || 'Hello, how can I help you today?';
