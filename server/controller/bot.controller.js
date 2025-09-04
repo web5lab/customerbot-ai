@@ -227,20 +227,7 @@ export const getChatBot = async (req, res) => {
 
 export const updateChatBot = async (req, res) => {
     const { botId } = req.params;
-    const {
-        name,
-        botAvatar,
-        userAvatar,
-        trainingData,
-        description,
-        systemPrompt,
-        customPrimaryColor,
-        customSecondaryColor,
-        customBgColor,
-        themeMode,
-        selectedFontSize,
-        customQuestions,
-    } = req.body;
+    const updateData = req.body;
 
     const iconFile = req.files?.icon?.[0] || null;
     const userIconFile = req.files?.userIcon?.[0] || null;
@@ -250,41 +237,85 @@ export const updateChatBot = async (req, res) => {
             return res.status(400).json({ message: 'Invalid Bot ID' });
         }
 
+        // Create update fields object from request body
         const updateFields = {};
+        
+        // Map frontend field names to database field names
+        const fieldMapping = {
+            name: 'name',
+            trainingData: 'trainingData',
+            description: 'discription',
+            systemPrompt: 'systemPrompt',
+            customPrimaryColor: 'primaryColour',
+            customSecondaryColor: 'secondaryColour',
+            customBgColor: 'backgroundColour',
+            selectedFontSize: 'typography',
+            customQuestions: 'customQuestions',
+            botName: 'name',
+            welcomeMessage: 'welcomeMessage',
+            popupMessage: 'popupMessage',
+            botAvatar: 'icon',
+            userAvatar: 'userIcon',
+            // Direct mapping for new UI config fields
+            selectedPalette: 'selectedPalette',
+            isCustomColorMode: 'isCustomColorMode',
+            chatPosition: 'chatPosition',
+            chatSize: 'chatSize',
+            animationStyle: 'animationStyle',
+            enableSounds: 'enableSounds',
+            enableTypingIndicator: 'enableTypingIndicator',
+            enableQuickReplies: 'enableQuickReplies',
+            enableHistory: 'enableHistory',
+            enableFAQ: 'enableFAQ',
+            enableHandover: 'enableHandover',
+            enableLeadCapture: 'enableLeadCapture',
+            leadCaptureMessage: 'leadCaptureMessage',
+            handoverMessage: 'handoverMessage',
+            headerTitle: 'headerTitle',
+            headerSubtitle: 'headerSubtitle',
+            placeholder: 'placeholder',
+            companyName: 'companyName',
+            supportEmail: 'supportEmail',
+            businessHours: 'businessHours',
+            responseTime: 'responseTime',
+            showBranding: 'showBranding',
+            customCSS: 'customCSS',
+            borderRadius: 'borderRadius',
+            shadowIntensity: 'shadowIntensity',
+            messageHistoryLimit: 'messageHistoryLimit',
+            typingDelay: 'typingDelay',
+            enableRateLimit: 'enableRateLimit',
+            maxMessageLength: 'maxMessageLength',
+            messageAlignment: 'messageAlignment',
+            autoOpenDelay: 'autoOpenDelay'
+        };
 
-        if (name) updateFields.name = name;
-        if (trainingData) updateFields.trainingData = trainingData;
-        if (description) updateFields.discription = description;
-        if (systemPrompt) updateFields.systemPrompt = systemPrompt;
+        // Apply all provided fields to updateFields
+        Object.keys(updateData).forEach(key => {
+            if (fieldMapping[key] && updateData[key] !== undefined) {
+                updateFields[fieldMapping[key]] = updateData[key];
+            }
+        });
 
-        // Optional theme-related fields
-        if (customPrimaryColor) updateFields.primaryColour = customPrimaryColor;
-        if (customSecondaryColor) updateFields.secondaryColour = customSecondaryColor;
-        if (customBgColor) updateFields.backgroundColour = customBgColor;
-        if (themeMode) updateFields.themeMode = themeMode;
-        if (selectedFontSize) updateFields.typography = selectedFontSize;
-        if (Array.isArray(customQuestions) && customQuestions.length > 0) {
-            updateFields.customQuestions = customQuestions;
-        }
+        // Handle file uploads
         if (iconFile) {
             const iconPath = path.join('uploads', `${Date.now()}-${iconFile.originalname}`);
             fs.writeFileSync(iconPath, iconFile.buffer);
             updateFields.icon = iconPath;
         }
 
-        if (botAvatar) {
-            updateFields.icon = botAvatar;
+        if (updateData.botAvatar && !iconFile) {
+            updateFields.icon = updateData.botAvatar;
         }
 
-        // Handle userIcon file
         if (userIconFile) {
             const userIconPath = path.join('uploads', `${Date.now()}-${userIconFile.originalname}`);
             fs.writeFileSync(userIconPath, userIconFile.buffer);
             updateFields.userIcon = userIconPath;
         }
 
-        if (userAvatar) {
-            updateFields.userIcon = userAvatar;
+        if (updateData.userAvatar && !userIconFile) {
+            updateFields.userIcon = updateData.userAvatar;
         }
 
         const updatedBot = await BotConfig.findByIdAndUpdate(
