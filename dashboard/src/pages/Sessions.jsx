@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { useDispatch, useSelector } from 'react-redux';
 import { getChatSessions } from '../store/global.Action';
+import toast from 'react-hot-toast';
 import { activeBotSelector, SessionsSelector } from '../store/global.Selctor';
 import { MessageSquare, Send, Download, Trash2, Edit3, Bot, User, Clock, CheckCircle, Star, Tag, AlertCircle, MoreHorizontal, UserCheck, Phone } from 'lucide-react';
 import socketService from '../services/socketService';
@@ -143,11 +144,21 @@ export function Sessions() {
   const handleDeleteSession = async (sessionId) => {
     try {
       await api.deleteSession(sessionId);
+      
+      // Update local state to remove the deleted session
+      dispatch(getChatSessions({ botId: activeBot._id }));
+      
+      // If the deleted session was currently selected, clear selection
       if (selectedSession && selectedSession._id === sessionId) {
-        setSelectedSession(sessions.find(s => s._id !== sessionId) || null);
+        const remainingSessions = sessions.filter(s => s._id !== sessionId);
+        setSelectedSession(remainingSessions.length > 0 ? remainingSessions[0] : null);
       }
+      
+      // Show success message
+      toast.success('Session deleted successfully');
     } catch (error) {
       console.error('Error deleting session:', error);
+      toast.error('Failed to delete session');
     }
   };
 

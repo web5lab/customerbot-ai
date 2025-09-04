@@ -134,7 +134,9 @@ export function ChatSessions({ sessions, onSessionSelect, onSessionDelete }) {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      onSessionDelete(session._id);
+                      if (confirm('Are you sure you want to delete this session?')) {
+                        onSessionDelete(session._id);
+                      }
                     }}
                     className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 
                                rounded-lg transition-colors opacity-0 group-hover:opacity-100"
