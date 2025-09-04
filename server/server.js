@@ -1,4 +1,5 @@
 import express from 'express';
+import { createServer } from 'http';
 import cors from 'cors';
 import passport from 'passport';
 import session from 'express-session';
@@ -14,12 +15,14 @@ import statsRoutes from './routes/stats.routes.js';
 import subscriptionRoutes from './routes/subscription.routes.js';
 import leadsRoutes from './routes/leads.routes.js';
 import { initializeCronJobs } from './services/cronJobs.js';
+import { initializeSocket } from './services/socketService.js';
 import './config/passport.js';
 import { databaseConnection } from './db/db.js';
 import dotenv from 'dotenv';
 import path from 'path';
 dotenv.config();
 const app = express();
+const server = createServer(app);
 
 // Middleware
 app.use(helmet());
@@ -68,6 +71,9 @@ app.use('/stats', statsRoutes);
 app.use('/subscription', subscriptionRoutes);
 app.use('/leads', leadsRoutes);
 
+// Initialize Socket.IO
+const io = initializeSocket(server);
+
 // Basic error handling
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -78,10 +84,11 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 3000;
 
 databaseConnection(() => {
-  app.listen(PORT, () => {
+  server.listen(PORT, () => {
     console.log(`server listening on port ${PORT}`);
     
     // Initialize cron jobs after server starts
     initializeCronJobs();
+    console.log('Socket.IO initialized for real-time communication');
   })
 })

@@ -1,6 +1,7 @@
 import { Send, Loader2, Bot, User } from 'lucide-react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { geminiChatApi, getBotConfig } from '../store/global.Action';
+import socketService from '../services/socketService';
 
 const THINKING_MESSAGES = [
     "Analyzing your request...",
@@ -92,6 +93,15 @@ export const ShareChatUI = () => {
     const [sessionId, setSessionId] = useState();
     const [thinkingMessage, setThinkingMessage] = useState(THINKING_MESSAGES[0]);
     const [isLoading, setIsLoading] = useState(true);
+    const [showHumanSupportButton, setShowHumanSupportButton] = useState(false);
+    const [humanSupportRequested, setHumanSupportRequested] = useState(false);
+    const [agentInfo, setAgentInfo] = useState(null);
+    const [showContactForm, setShowContactForm] = useState(false);
+    const [contactInfo, setContactInfo] = useState({
+        name: '',
+        email: '',
+        phone: ''
+    });
 
     useLayoutEffect(() => {
         const fetchThemeData = async () => {
@@ -125,7 +135,112 @@ export const ShareChatUI = () => {
         fetchThemeData();
     }, [])
 
+    // Initialize socket connection
+    useEffect(() => {
+        if (activeBotId && sessionId) {
+            socketService.connect();
+            socketService.joinSession(sessionId, activeBotId);
+
+            // Listen for agent joining
+            socketService.on('agent-joined', (data) => {
+                setAgentInfo({
+                    name: data.agentName,
+                    id: data.agentId
+                });
+                setHumanSupportRequested(false);
+                
+                // Add system message
+                setMessages(prev => [...prev, {
+                    role: 'system',
+                    content: `${data.agentName} has joined the conversation`,
+                    timestamp: Date.now()
+                }]);
+            });
+
+            // Listen for new messages from agents
+            socketService.on('new-message', (data) => {
+                if (data.message.role === 'agent') {
+                    setMessages(prev => [...prev, {
+                        role: 'bot',
+                        content: data.message.content,
+                        timestamp: data.message.timestamp,
+                        isAgent: true,
+                        agentName: data.message.senderName
+                    }]);
+                }
+            });
+
+            // Listen for session resolved
+            socketService.on('session-resolved', (data) => {
+                setMessages(prev => [...prev, {
+                    role: 'system',
+                    content: `Session resolved by ${data.resolvedBy}`,
+                    timestamp: data.timestamp
+                }]);
+            });
+
+            // Listen for support confirmation
+            socketService.on('support-requested', (data) => {
+                setHumanSupportRequested(true);
+                setMessages(prev => [...prev, {
+                    role: 'system',
+                    content: data.message,
+                    timestamp: Date.now()
+                }]);
+            });
+
+            return () => {
+                socketService.removeAllListeners();
+                socketService.disconnect();
+            };
+        }
+    }, [activeBotId, sessionId]);
+
+    // Show human support button after 3 messages
+    useEffect(() => {
+        if (messages.length >= 6 && !humanSupportRequested && !agentInfo) {
+            setShowHumanSupportButton(true);
+        }
+    }, [messages.length, humanSupportRequested, agentInfo]);
+
     const setInputData = (value) => setInput(value);
+
+    const handleRequestHumanSupport = async () => {
+        if (!sessionId) return;
+        
+        try {
+            const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/chat/session/${sessionId}/request-support`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: 'I would like to speak with a human agent',
+                    customerInfo: contactInfo.email || contactInfo.name ? contactInfo : null
+                })
+            });
+
+            if (response.ok) {
+                setHumanSupportRequested(true);
+                setShowHumanSupportButton(false);
+                setShowContactForm(false);
+                
+                // Also notify via socket
+                socketService.requestHumanSupport(
+                    sessionId, 
+                    'I would like to speak with a human agent',
+                    contactInfo.email || contactInfo.name ? contactInfo : null
+                );
+            }
+        } catch (error) {
+            console.error('Error requesting human support:', error);
+        }
+    };
+
+    const handleContactFormSubmit = (e) => {
+        e.preventDefault();
+        handleRequestHumanSupport();
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -148,6 +263,11 @@ export const ShareChatUI = () => {
             clearInterval(thinkingInterval);
             setSessionId(Chatdata.sessionId);
             setMessages([...updatedMessages, { role: 'bot', content: Chatdata.aiResponse, animation: 'fadeIn' }]);
+            
+            // If agent is present, also send via socket
+            if (agentInfo) {
+                socketService.sendMessage(Chatdata.sessionId, input, false);
+            }
         } catch (error) {
             clearInterval(thinkingInterval);
             setMessages([...updatedMessages, { role: 'bot', content: "Sorry, I encountered an error processing your request.", isError: true }]);
@@ -200,12 +320,108 @@ export const ShareChatUI = () => {
                     {/* Message Area */}
                     <div className="flex-1 overflow-hidden" style={{ backgroundColor: customBgColor }}>
                         <div className="h-full overflow-y-auto p-6 space-y-6">
+                            {/* Human Support Button */}
+                            {showHumanSupportButton && !humanSupportRequested && !agentInfo && (
+                                <div className="flex justify-center mb-4">
+                                    <button
+                                        onClick={() => setShowContactForm(true)}
+                                        className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-lg"
+                                    >
+                                        🙋‍♂️ Talk to Human Agent
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Contact Form Modal */}
+                            {showContactForm && (
+                                <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-6">
+                                    <h3 className="text-lg font-semibold text-blue-900 mb-4">
+                                        Connect with Human Support
+                                    </h3>
+                                    <p className="text-blue-700 mb-4">
+                                        Please provide your contact information so our team can assist you better.
+                                    </p>
+                                    <form onSubmit={handleContactFormSubmit} className="space-y-4">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                            <input
+                                                type="text"
+                                                placeholder="Your name"
+                                                value={contactInfo.name}
+                                                onChange={(e) => setContactInfo(prev => ({ ...prev, name: e.target.value }))}
+                                                className="px-3 py-2 border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                            <input
+                                                type="email"
+                                                placeholder="Your email"
+                                                value={contactInfo.email}
+                                                onChange={(e) => setContactInfo(prev => ({ ...prev, email: e.target.value }))}
+                                                className="px-3 py-2 border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            />
+                                        </div>
+                                        <input
+                                            type="tel"
+                                            placeholder="Your phone (optional)"
+                                            value={contactInfo.phone}
+                                            onChange={(e) => setContactInfo(prev => ({ ...prev, phone: e.target.value }))}
+                                            className="w-full px-3 py-2 border border-blue-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                        <div className="flex gap-3">
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowContactForm(false)}
+                                                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                type="submit"
+                                                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                            >
+                                                Request Human Support
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            )}
+
+                            {/* Human Support Status */}
+                            {humanSupportRequested && !agentInfo && (
+                                <div className="mb-4 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-6 h-6 border-2 border-yellow-500 border-t-transparent rounded-full animate-spin"></div>
+                                        <div>
+                                            <p className="font-medium text-yellow-800">Connecting you with a human agent...</p>
+                                            <p className="text-sm text-yellow-600">Estimated wait time: 2-5 minutes</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Agent Info */}
+                            {agentInfo && (
+                                <div className="mb-4 bg-green-50 border border-green-200 rounded-lg p-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+                                            <User className="w-4 h-4 text-white" />
+                                        </div>
+                                        <div>
+                                            <p className="font-medium text-green-800">
+                                                {agentInfo.name} is now assisting you
+                                            </p>
+                                            <p className="text-sm text-green-600">Human support agent</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             {messages.map((message, index) => (
                                 <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                                     <div className="flex items-start gap-4 max-w-[85%]">
                                         {message.role === 'bot' && (
                                             <div className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
-                                                {botAvatar ? (
+                                                {message.isAgent ? (
+                                                    <User className="w-4 h-4 text-blue-600" />
+                                                ) : botAvatar ? (
                                                     <img src={botAvatar} alt="Bot" className="w-6 h-6 rounded-lg object-cover" />
                                                 ) : (
                                                     <Bot className="w-4 h-4 text-gray-600" />
@@ -214,20 +430,40 @@ export const ShareChatUI = () => {
                                         )}
 
                                         <div className={`flex flex-col ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
+                                            {/* Agent name for human messages */}
+                                            {message.isAgent && message.agentName && (
+                                                <div className="text-xs text-blue-600 font-medium mb-1">
+                                                    {message.agentName} (Human Agent)
+                                                </div>
+                                            )}
+                                            
+                                            {/* System message styling */}
+                                            {message.role === 'system' && (
+                                                <div className="text-center w-full mb-2">
+                                                    <div className="inline-block bg-gray-100 text-gray-600 px-4 py-2 rounded-full text-sm border border-gray-200">
+                                                        {message.content}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {message.role !== 'system' && (
                                             <div
                                                 className={`rounded-lg px-4 py-3 border ${
                                                     message.role === 'user'
                                                         ? 'bg-gray-900 text-white border-gray-900'
                                                         : message.isError 
                                                             ? 'bg-red-50 text-red-800 border-red-200' 
-                                                            : 'bg-white text-gray-900 border-gray-200'
+                                                            : message.isAgent
+                                                                ? 'bg-blue-50 text-blue-900 border-blue-200'
+                                                                : 'bg-white text-gray-900 border-gray-200'
                                                 }`}
                                                 style={{ fontSize: selectedFontSize }}
                                             >
                                                 <p className="leading-relaxed">{message.content}</p>
                                             </div>
+                                            )}
                                             <div className="mt-2 text-xs text-gray-500">
-                                                <span>{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                <span>{formatTime(message.timestamp)}</span>
                                                 {message.role === 'user' && <span className="text-green-500 ml-1">✓</span>}
                                             </div>
                                         </div>
@@ -294,7 +530,7 @@ export const ShareChatUI = () => {
                                 <textarea
                                     value={input}
                                     onChange={e => setInputData(e.target.value)}
-                                    placeholder="Ask me anything..."
+                                    placeholder={agentInfo ? `Message ${agentInfo.name}...` : "Ask me anything..."}
                                     rows={1}
                                     className="w-full px-4 py-3 pr-16 rounded-lg border border-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent resize-none"
                                     style={{
@@ -332,7 +568,7 @@ export const ShareChatUI = () => {
 
                         <div className="flex items-center justify-between mt-3 text-xs text-gray-500">
                             <span>Press Enter to send, Shift + Enter for new line</span>
-                            <span>AI-powered responses</span>
+                            <span>{agentInfo ? 'Connected to human agent' : 'AI-powered responses'}</span>
                         </div>
                     </div>
                 </div>

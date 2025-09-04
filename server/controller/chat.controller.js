@@ -7,6 +7,8 @@ import { queryVectorData } from '../services/vectorServices.js';
 import { updateBotStats } from './stats.controller.js';
 import { useCredit, checkSubscriptionLimits } from '../services/subscriptionService.js';
 import Lead from '../models/Lead.schema.js';
+import { notifyAgents, notifySession } from '../services/socketService.js';
+import mongoose from 'mongoose';
 
 export const AiChatController = async (req, res) => {
     try {
@@ -264,6 +266,197 @@ export const updateSessionStatus = async (req, res) => {
         console.error('Error updating session status:', error);
         res.status(500).json({
             error: 'Error updating session status',
+            details: error.message
+        });
+    }
+};
+
+// Request human support
+export const requestHumanSupport = async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+        const { message, customerInfo } = req.body;
+
+        if (!mongoose.Types.ObjectId.isValid(sessionId)) {
+            return res.status(400).json({ message: 'Invalid session ID' });
+        }
+
+        const session = await SessionSchema.findById(sessionId);
+        if (!session) {
+            return res.status(404).json({ message: 'Session not found' });
+        }
+
+        // Update session
+        session.needsHumanSupport = true;
+        session.status = 'pending';
+        session.humanSupportRequestedAt = new Date();
+        
+        // Update customer info if provided
+        if (customerInfo) {
+            if (customerInfo.name) session.customerName = customerInfo.name;
+            if (customerInfo.email) session.customerEmail = customerInfo.email;
+        }
+
+        // Add system message
+        session.messages.push({
+            role: 'system',
+            content: 'Customer has requested human support. An agent will join shortly.',
+            timestamp: new Date()
+        });
+
+        // Add customer message if provided
+        if (message) {
+            session.messages.push({
+                role: 'user',
+                content: message,
+                timestamp: new Date()
+            });
+            session.lastMessage = message;
+        }
+
+        session.messageCount = session.messages.length;
+        await session.save();
+
+        // Notify agents via Socket.IO
+        notifyAgents(session.botId, 'support-request', {
+            sessionId,
+            customerMessage: message,
+            customerInfo,
+            session: {
+                _id: session._id,
+                title: session.title,
+                lastMessage: session.lastMessage,
+                messageCount: session.messageCount,
+                timestamp: session.timestamp,
+                customerName: session.customerName,
+                customerEmail: session.customerEmail
+            },
+            timestamp: new Date()
+        });
+
+        res.status(200).json({
+            message: 'Human support requested successfully',
+            estimatedWaitTime: '2-5 minutes',
+            session
+        });
+    } catch (error) {
+        console.error('Error requesting human support:', error);
+        res.status(500).json({
+            error: 'Error requesting human support',
+            details: error.message
+        });
+    }
+};
+
+// Get active support sessions for agents
+export const getActiveSupportSessions = async (req, res) => {
+    try {
+        const { botId } = req.params;
+        const userId = req.user.userId;
+
+        if (!mongoose.Types.ObjectId.isValid(botId)) {
+            return res.status(400).json({ message: 'Invalid Bot ID' });
+        }
+
+        // Verify user has access to this bot
+        const team = await mongoose.model('Team').findOne({
+            botId,
+            'members.userId': userId,
+            'members.status': 'active'
+        });
+
+        if (!team) {
+            return res.status(403).json({ message: 'Access denied' });
+        }
+
+        // Get sessions needing human support
+        const sessions = await SessionSchema.find({
+            botId,
+            needsHumanSupport: true,
+            status: { $in: ['pending', 'active'] }
+        }).populate('assignedAgent', 'name email')
+          .sort({ humanSupportRequestedAt: 1 }); // Oldest first
+
+        res.status(200).json({ sessions });
+    } catch (error) {
+        console.error('Error fetching support sessions:', error);
+        res.status(500).json({
+            error: 'Error fetching support sessions',
+            details: error.message
+        });
+    }
+};
+
+// Assign agent to session
+export const assignAgentToSession = async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+        const userId = req.user.userId;
+
+        if (!mongoose.Types.ObjectId.isValid(sessionId)) {
+            return res.status(400).json({ message: 'Invalid session ID' });
+        }
+
+        const session = await SessionSchema.findById(sessionId);
+        if (!session) {
+            return res.status(404).json({ message: 'Session not found' });
+        }
+
+        // Verify user has access to this bot
+        const team = await mongoose.model('Team').findOne({
+            botId: session.botId,
+            'members.userId': userId,
+            'members.status': 'active'
+        });
+
+        if (!team) {
+            return res.status(403).json({ message: 'Access denied' });
+        }
+
+        // Check if session is already assigned
+        if (session.assignedAgent && session.assignedAgent.toString() !== userId) {
+            return res.status(400).json({ message: 'Session already assigned to another agent' });
+        }
+
+        // Assign agent
+        session.assignedAgent = userId;
+        session.status = 'active';
+        session.agentJoinedAt = new Date();
+
+        const user = await mongoose.model('User').findById(userId);
+        
+        // Add system message
+        session.messages.push({
+            role: 'system',
+            content: `${user.name} has joined the conversation`,
+            timestamp: new Date()
+        });
+
+        session.messageCount = session.messages.length;
+        await session.save();
+
+        // Notify via Socket.IO
+        notifySession(sessionId, 'agent-joined', {
+            agentName: user.name,
+            agentId: userId,
+            message: `${user.name} has joined the conversation`,
+            timestamp: new Date()
+        });
+
+        notifyAgents(session.botId, 'session-taken', {
+            sessionId,
+            agentName: user.name,
+            agentId: userId
+        });
+
+        res.status(200).json({
+            message: 'Agent assigned successfully',
+            session
+        });
+    } catch (error) {
+        console.error('Error assigning agent:', error);
+        res.status(500).json({
+            error: 'Error assigning agent',
             details: error.message
         });
     }

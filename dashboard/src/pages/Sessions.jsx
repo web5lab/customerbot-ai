@@ -5,7 +5,8 @@ import { api } from '../services/api';
 import { useDispatch, useSelector } from 'react-redux';
 import { getChatSessions } from '../store/global.Action';
 import { activeBotSelector, SessionsSelector } from '../store/global.Selctor';
-import { MessageSquare, Send, Download, Trash2, Edit3, Bot, User, Clock, CheckCircle, Star, Tag, AlertCircle, MoreHorizontal } from 'lucide-react';
+import { MessageSquare, Send, Download, Trash2, Edit3, Bot, User, Clock, CheckCircle, Star, Tag, AlertCircle, MoreHorizontal, UserCheck, Phone } from 'lucide-react';
+import socketService from '../services/socketService';
 
 export function Sessions() {
   const navigate = useNavigate();
@@ -22,11 +23,103 @@ export function Sessions() {
   const [resolveFeedback, setResolveFeedback] = useState('');
   const [sessionPriority, setSessionPriority] = useState('medium');
   const [sessionTags, setSessionTags] = useState('');
+  const [supportSessions, setSupportSessions] = useState([]);
+  const [connectedSessions, setConnectedSessions] = useState(new Set());
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
     dispatch(getChatSessions({ botId: activeBot._id }));
+    fetchSupportSessions();
   }, []);
+
+  // Initialize socket for agents
+  useEffect(() => {
+    if (activeBot) {
+      socketService.connect(localStorage.getItem('authToken'));
+      socketService.joinAsAgent(activeBot._id);
+
+      // Listen for support requests
+      socketService.on('support-request', (data) => {
+        setSupportSessions(prev => {
+          const exists = prev.find(s => s.sessionId === data.sessionId);
+          if (exists) return prev;
+          return [...prev, data];
+        });
+        
+        // Show notification
+        toast.success(`New support request from customer`);
+      });
+
+      // Listen for new messages in active sessions
+      socketService.on('customer-message', (data) => {
+        if (selectedSession && selectedSession._id === data.sessionId) {
+          setSelectedSession(prev => ({
+            ...prev,
+            messages: [...(prev.messages || []), data.message]
+          }));
+        }
+      });
+
+      // Listen for session updates
+      socketService.on('session-taken', (data) => {
+        setSupportSessions(prev => prev.filter(s => s.sessionId !== data.sessionId));
+      });
+
+      return () => {
+        socketService.removeAllListeners();
+      };
+    }
+  }, [activeBot]);
+
+  const fetchSupportSessions = async () => {
+    if (!activeBot) return;
+    
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/chat/bot/${activeBot._id}/support-sessions`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setSupportSessions(data.sessions || []);
+      }
+    } catch (error) {
+      console.error('Error fetching support sessions:', error);
+    }
+  };
+
+  const handleTakeSession = async (sessionId) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/chat/session/${sessionId}/assign-agent`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        // Join the session via socket
+        socketService.takeSession(sessionId);
+        setConnectedSessions(prev => new Set([...prev, sessionId]));
+        
+        // Remove from support queue
+        setSupportSessions(prev => prev.filter(s => s.sessionId !== sessionId));
+        
+        // Refresh sessions to show the newly assigned session
+        dispatch(getChatSessions({ botId: activeBot._id }));
+        
+        toast.success('Session assigned successfully');
+      }
+    } catch (error) {
+      console.error('Error taking session:', error);
+      toast.error('Failed to take session');
+    }
+  };
 
   useEffect(() => {
     if (sessions.length > 0) {
@@ -139,6 +232,11 @@ export function Sessions() {
   const handleSendMessage = (e) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
+
+    // Send via socket if this is a live session
+    if (connectedSessions.has(selectedSession._id)) {
+      socketService.sendMessage(selectedSession._id, newMessage, true);
+    }
 
     const updatedSession = {
       ...selectedSession,
@@ -281,7 +379,42 @@ export function Sessions() {
 
       <div className="flex w-full h-screen">
         {/* Left Sidebar - Sessions List */}
-        <div className="w-96 flex-shrink-0 bg-gray-50 border-r border-gray-200">
+        <div className="w-96 flex-shrink-0 bg-gray-50 border-r border-gray-200 flex flex-col">
+          {/* Support Queue */}
+          {supportSessions.length > 0 && (
+            <div className="bg-yellow-50 border-b border-yellow-200 p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <UserCheck className="w-5 h-5 text-yellow-600" />
+                <h3 className="font-semibold text-yellow-800">Support Queue ({supportSessions.length})</h3>
+              </div>
+              <div className="space-y-2 max-h-40 overflow-y-auto">
+                {supportSessions.map((supportSession) => (
+                  <div key={supportSession.sessionId} className="bg-white rounded-lg p-3 border border-yellow-200">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {supportSession.session?.title || 'Customer Support Request'}
+                        </p>
+                        <p className="text-xs text-gray-600 truncate">
+                          {supportSession.customerMessage || 'Requested human support'}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {new Date(supportSession.timestamp).toLocaleTimeString()}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleTakeSession(supportSession.sessionId)}
+                        className="ml-2 px-3 py-1 bg-blue-600 text-white text-xs rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        Take
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
           <div className="h-full overflow-hidden">
             <ChatSessions
               sessions={sessions}
@@ -300,11 +433,17 @@ export function Sessions() {
               <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gray-50">
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center">
-                    <Bot className="w-5 h-5 text-gray-600" />
+                    {selectedSession.assignedAgent ? (
+                      <User className="w-5 h-5 text-blue-600" />
+                    ) : (
+                      <Bot className="w-5 h-5 text-gray-600" />
+                    )}
                   </div>
                   <div>
                     <h2 className="text-lg font-semibold text-gray-900">
-                      {activeBot.name}
+                      {selectedSession.assignedAgent ? 
+                        `${activeBot.name} - Human Support` : 
+                        activeBot.name}
                     </h2>
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                       <span>{selectedSession.name || 'Conversation'}</span>
@@ -322,11 +461,38 @@ export function Sessions() {
                           </span>
                         </>
                       )}
+                      {selectedSession.needsHumanSupport && (
+                        <>
+                          <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
+                          <span className="px-2 py-1 rounded-full text-xs font-medium border bg-yellow-100 text-yellow-800 border-yellow-200">
+                            Needs Human Support
+                          </span>
+                        </>
+                      )}
+                      {connectedSessions.has(selectedSession._id) && (
+                        <>
+                          <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
+                          <span className="px-2 py-1 rounded-full text-xs font-medium border bg-green-100 text-green-800 border-green-200">
+                            Live Session
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
+                  {/* Take Session Button */}
+                  {selectedSession.needsHumanSupport && !selectedSession.assignedAgent && (
+                    <button
+                      onClick={() => handleTakeSession(selectedSession._id)}
+                      className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                    >
+                      <UserCheck className="w-4 h-4" />
+                      Take Session
+                    </button>
+                  )}
+                  
                   {/* Session Actions */}
                   <div className="flex items-center gap-2">
                     <select
@@ -343,236 +509,3 @@ export function Sessions() {
                       <option value="urgent">Urgent</option>
                     </select>
                     
-                    {selectedSession.status !== 'resolved' && (
-                      <button
-                        onClick={() => setShowResolveModal(true)}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium"
-                      >
-                        <CheckCircle className="w-4 h-4" />
-                        Mark Resolved
-                      </button>
-                    )}
-                  </div>
-                  
-                  <button
-                    className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                    title="Export chat"
-                  >
-                    <Download className="w-4 h-4" />
-                  </button>
-                  <button
-                    className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    onClick={() => handleDeleteSession(selectedSession._id)}
-                    title="Delete chat"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Session Info Bar */}
-              <div className="px-6 py-3 bg-gray-50 border-b border-gray-200">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-4 text-sm">
-                    {selectedSession.customerName && (
-                      <span className="text-gray-700">
-                        <strong>Customer:</strong> {selectedSession.customerName}
-                      </span>
-                    )}
-                    {selectedSession.customerEmail && (
-                      <span className="text-gray-700">
-                        <strong>Email:</strong> {selectedSession.customerEmail}
-                      </span>
-                    )}
-                    {selectedSession.resolvedAt && (
-                      <span className="text-green-600">
-                        <strong>Resolved:</strong> {new Date(selectedSession.resolvedAt).toLocaleDateString()}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={sessionTags}
-                      onChange={(e) => setSessionTags(e.target.value)}
-                      onBlur={() => {
-                        const tags = sessionTags.split(',').map(tag => tag.trim()).filter(tag => tag);
-                        handleUpdateSessionStatus({ tags });
-                      }}
-                      placeholder="Add tags..."
-                      className="px-3 py-1 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 w-32"
-                    />
-                    <Tag className="w-4 h-4 text-gray-400" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Messages Area */}
-              <div className="flex-1 p-6 overflow-y-auto">
-                {selectedSession.messages && selectedSession.messages.length > 0 ? (
-                  <div className="space-y-6 max-w-4xl mx-auto">
-                    {selectedSession.messages.map((message, index) => (
-                      <div
-                        key={message._id || index}
-                        className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} group`}
-                      >
-                        {message.role !== 'user' && (
-                          <div className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center mr-4 flex-shrink-0">
-                            <Bot className="w-4 h-4 text-gray-600" />
-                          </div>
-                        )}
-
-                        <div className={`flex flex-col max-w-3xl ${message.role === 'user' ? 'items-end' : 'items-start'}`}>
-                          {editingMessageId === message._id ? (
-                            <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 w-full">
-                              <textarea
-                                className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent resize-none"
-                                value={editedContent}
-                                onChange={(e) => setEditedContent(e.target.value)}
-                                rows={4}
-                                style={{ minWidth: '400px' }}
-                              />
-                              <div className="flex justify-end space-x-3 mt-3">
-                                <button
-                                  onClick={cancelEditing}
-                                  className="px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-all"
-                                >
-                                  Cancel
-                                </button>
-                                <button
-                                  onClick={saveEdit}
-                                  className="px-4 py-1.5 bg-gray-900 text-white text-sm rounded-lg hover:bg-gray-800 transition-all font-medium"
-                                >
-                                  Save Changes
-                                </button>
-                              </div>
-                            </div>
-                          ) : (
-                            <div
-                              className={`relative rounded-lg px-4 py-3 border transition-all ${
-                                message.role === 'user'
-                                  ? 'bg-gray-900 text-white border-gray-900'
-                                  : 'bg-white border-gray-200 text-gray-800 hover:border-gray-300'
-                              }`}
-                            >
-                              <p className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</p>
-                              <div className={`text-xs mt-2 flex items-center gap-2 ${
-                                message.role === 'user' ? 'text-gray-300' : 'text-gray-500'
-                              }`}>
-                                <Clock className="w-3 h-3" />
-                                <span>{formatTimestamp(message.timestamp)}</span>
-                              </div>
-
-                              {message.role === 'bot' && (
-                                <button
-                                  onClick={() => startEditing(message)}
-                                  className="absolute -top-2 -right-2 p-1.5 bg-white border border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                                  title="Edit response"
-                                >
-                                  <Edit3 className="w-3 h-3" />
-                                </button>
-                              )}
-                            </div>
-                          )}
-                        </div>
-
-                        {message.role === 'user' && (
-                          <div className="w-8 h-8 rounded-lg bg-gray-600 border border-gray-600 flex items-center justify-center ml-4 flex-shrink-0">
-                            <User className="w-4 h-4 text-white" />
-                          </div>
-                        )}
-                      </div>
-                    ))}
-
-                    {isTyping && (
-                      <div className="flex justify-start">
-                        <div className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-200 flex items-center justify-center mr-4 flex-shrink-0">
-                          <Bot className="w-4 h-4 text-gray-600" />
-                        </div>
-                        <div className="bg-white border border-gray-200 rounded-lg px-4 py-3">
-                          <div className="flex items-center space-x-2">
-                            <div className="flex space-x-1">
-                              <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"></div>
-                              <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '200ms' }}></div>
-                              <div className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: '400ms' }}></div>
-                            </div>
-                            <span className="text-sm text-gray-500 italic">AI is thinking...</span>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    <div ref={messagesEndRef} />
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full text-center">
-                    <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center text-gray-400 mb-6 border border-gray-200">
-                      <MessageSquare className="w-8 h-8" />
-                    </div>
-                    <h3 className="text-xl font-bold text-gray-900 mb-3">Start a conversation</h3>
-                    <p className="text-gray-600 mb-6 max-w-md">Send a message to begin chatting with {activeBot.name}</p>
-                  </div>
-                )}
-              </div>
-
-              {/* Message Input */}
-              <div className="p-6 border-t border-gray-200 bg-gray-50">
-                <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto">
-                  <div className="flex items-end gap-4">
-                    <div className="flex-1 relative">
-                      <textarea
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        placeholder="Type your message..."
-                        rows={1}
-                        className="w-full px-4 py-3 pr-16 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent resize-none bg-white"
-                        style={{ minHeight: '48px', maxHeight: '120px' }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            handleSendMessage(e);
-                          }
-                        }}
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      className={`p-3 rounded-lg transition-all ${
-                        newMessage.trim()
-                          ? 'bg-gray-900 hover:bg-gray-800 text-white'
-                          : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                      }`}
-                      disabled={!newMessage.trim() || isTyping}
-                    >
-                      <Send className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between mt-3 text-xs text-gray-500">
-                    <span>Press Enter to send, Shift + Enter for new line</span>
-                    <span>{newMessage.length}/2000</span>
-                  </div>
-                </form>
-              </div>
-            </>
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full text-center bg-gray-50">
-              <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-6 border border-gray-200">
-                <MessageSquare className="w-10 h-10 text-gray-400" />
-              </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-4">
-                No conversation selected
-              </h3>
-              <p className="text-gray-600 mb-8 max-w-md">Select a chat from the sidebar or create a new one to get started</p>
-              <button
-                className="flex items-center gap-2 px-6 py-3 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors"
-                onClick={() => navigate('/preview')}
-              >
-                <MessageSquare className="w-4 h-4" />
-                Start New Chat
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}

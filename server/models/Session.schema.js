@@ -55,6 +55,27 @@ const sessionSchema = new mongoose.Schema({
     ref: 'User',
     default: null
   },
+  needsHumanSupport: {
+    type: Boolean,
+    default: false
+  },
+  humanSupportRequestedAt: {
+    type: Date,
+    default: null
+  },
+  assignedAgent: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  agentJoinedAt: {
+    type: Date,
+    default: null
+  },
+  lastActivity: {
+    type: Date,
+    default: Date.now
+  },
   priority: {
     type: String,
     enum: ['low', 'medium', 'high', 'urgent'],
