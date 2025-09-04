@@ -106,6 +106,7 @@ export const ShareChatUI = () => {
     });
     const [isConnected, setIsConnected] = useState(false);
     const [agentTyping, setAgentTyping] = useState(false);
+    const [enableHandover, setEnableHandover] = useState(true);
 
     const messagesEndRef = useRef(null);
     const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -133,6 +134,9 @@ export const ShareChatUI = () => {
                     setBotName(data.name || 'AI Assistant');
                     setCustomQuestions(data.customQuestions || []);
                     setWelcomeMessage(data.welcomeMessage || 'Hello! How can I help you today?');
+                    
+                    // Set human handover setting
+                    setEnableHandover(data.enableHandover !== undefined ? data.enableHandover : true);
                     
                     setMessages([{ 
                         role: 'bot', 
@@ -234,10 +238,21 @@ export const ShareChatUI = () => {
 
     // Show human support button after 3 exchanges (6 messages)
     useEffect(() => {
-        if (messages.length >= 6 && !humanSupportRequested && !agentInfo) {
+        if (messages.length >= 6 && !humanSupportRequested && !agentInfo && enableHandover) {
             setShowHumanSupportButton(true);
         }
-    }, [messages.length, humanSupportRequested, agentInfo]);
+    }, [messages.length, humanSupportRequested, agentInfo, enableHandover]);
+
+    // Also show button after 30 seconds if handover is enabled
+    useEffect(() => {
+        if (enableHandover && !humanSupportRequested && !agentInfo) {
+            const timer = setTimeout(() => {
+                setShowHumanSupportButton(true);
+            }, 30000); // 30 seconds
+
+            return () => clearTimeout(timer);
+        }
+    }, [enableHandover, humanSupportRequested, agentInfo]);
 
     const handleRequestHumanSupport = () => {
         if (!sessionId) return;
@@ -382,15 +397,25 @@ export const ShareChatUI = () => {
                     <div className="flex-1 overflow-hidden" style={{ backgroundColor: customBgColor }}>
                         <div className="h-full overflow-y-auto p-6 space-y-6">
                             {/* Human Support Button */}
-                            {showHumanSupportButton && !humanSupportRequested && !agentInfo && (
+                            {enableHandover && showHumanSupportButton && !humanSupportRequested && !agentInfo && (
                                 <div className="flex justify-center mb-4">
                                     <button
                                         onClick={handleRequestHumanSupport}
-                                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-lg"
+                                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-lg animate-pulse"
                                     >
                                         <UserCheck className="w-4 h-4" />
                                         Talk to Human Agent
                                     </button>
+                                </div>
+                            )}
+
+                            {/* Debug info for testing */}
+                            {process.env.NODE_ENV === 'development' && (
+                                <div className="text-xs text-gray-500 bg-gray-100 p-2 rounded">
+                                    Debug: Messages: {messages.length}, EnableHandover: {enableHandover.toString()}, 
+                                    ShowButton: {showHumanSupportButton.toString()}, 
+                                    SupportRequested: {humanSupportRequested.toString()}, 
+                                    AgentConnected: {!!agentInfo}
                                 </div>
                             )}
 
@@ -613,7 +638,7 @@ export const ShareChatUI = () => {
 
                     {/* Input Area */}
                     <div className="p-6 border-t border-gray-200 bg-white">
-                        {customQuestions.length > 0 && !agentInfo && (
+                        {customQuestions.length > 0 && !agentInfo && messages.length <= 2 && (
                             <div className="mb-4 flex flex-wrap gap-2">
                                 {customQuestions.map((question, index) => (
                                     <button
@@ -625,6 +650,18 @@ export const ShareChatUI = () => {
                                         {question}
                                     </button>
                                 ))}
+                            </div>
+                        )}
+
+                        {/* Manual Human Support Button (always visible if enabled) */}
+                        {enableHandover && !humanSupportRequested && !agentInfo && messages.length > 2 && (
+                            <div className="mb-4 text-center">
+                                <button
+                                    onClick={handleRequestHumanSupport}
+                                    className="text-sm text-blue-600 hover:text-blue-700 underline"
+                                >
+                                    Need to talk to a human? Click here
+                                </button>
                             </div>
                         )}
 
