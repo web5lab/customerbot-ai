@@ -15,7 +15,7 @@ import { activeBotSelector } from '../store/global.Selctor';
 import { AgentDashboard } from '../components/AgentDashboard';
 import { AgentChatInterface } from '../components/AgentChatInterface';
 import socketService from '../services/socketService';
-import toast from 'react-hot-toast';
+import { toastLoader } from '../components/ToastLoader';
 
 export function AgentDashboardPage() {
   const activeBot = useSelector(activeBotSelector);
@@ -39,7 +39,10 @@ export function AgentDashboardPage() {
       socketService.on('session-assigned', (data) => {
         if (data.sessionId) {
           setSelectedSession(data.session);
-          toast.success('Session assigned to you');
+          toastLoader.success(
+            'Session Assigned',
+            'You are now handling this customer conversation'
+          );
         }
       });
 
@@ -47,7 +50,10 @@ export function AgentDashboardPage() {
       socketService.on('session-resolved', (data) => {
         if (selectedSession && selectedSession._id === data.sessionId) {
           setSelectedSession(null);
-          toast.success('Session resolved successfully');
+          toastLoader.success(
+            'Session Resolved',
+            'The customer conversation has been successfully closed'
+          );
           
           // Update stats
           setAgentStats(prev => ({
@@ -65,7 +71,10 @@ export function AgentDashboardPage() {
           ...prev,
           pendingQueue: prev.pendingQueue + 1
         }));
-        toast.info('New support request received');
+        toastLoader.info(
+          'Support Request',
+          'A new customer needs assistance'
+        );
       });
 
       return () => {

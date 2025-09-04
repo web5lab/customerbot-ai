@@ -14,7 +14,7 @@ import {
   UserPlus
 } from 'lucide-react';
 import socketService from '../services/socketService';
-import toast from 'react-hot-toast';
+import { toastLoader } from './ToastLoader';
 
 export function AgentDashboard({ botId, onSessionSelect }) {
   const [activeSessions, setActiveSessions] = useState([]);
@@ -47,6 +47,12 @@ export function AgentDashboard({ botId, onSessionSelect }) {
           ...prev,
           activeChats: prev.activeChats + 1
         }));
+        
+        // Show notification
+        toastLoader.info(
+          'New Support Request',
+          'A customer has requested human assistance'
+        );
       });
 
       // Listen for active sessions
@@ -212,11 +218,17 @@ export function AgentDashboard({ botId, onSessionSelect }) {
         // Select this session
         onSessionSelect?.(session);
         
-        toast.success('Joined session successfully');
+        toastLoader.success(
+          'Session Joined',
+          'You are now connected to the customer'
+        );
       }
     } catch (error) {
       console.error('Error joining session:', error);
-      toast.error('Failed to join session');
+      toastLoader.error(
+        'Join Failed',
+        'Unable to join the session. Please try again.'
+      );
     }
   };
 
