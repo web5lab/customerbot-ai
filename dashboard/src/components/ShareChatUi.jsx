@@ -238,7 +238,7 @@ export const ShareChatUI = () => {
 
     // Show human support button after 3 exchanges (6 messages)
     useEffect(() => {
-        if (messages.length >= 6 && !humanSupportRequested && !agentInfo && enableHandover) {
+        if (messages.length >= 4 && !humanSupportRequested && !agentInfo && enableHandover) {
             setShowHumanSupportButton(true);
         }
     }, [messages.length, humanSupportRequested, agentInfo, enableHandover]);
@@ -248,7 +248,7 @@ export const ShareChatUI = () => {
         if (enableHandover && !humanSupportRequested && !agentInfo) {
             const timer = setTimeout(() => {
                 setShowHumanSupportButton(true);
-            }, 30000); // 30 seconds
+            }, 10000); // 10 seconds for faster testing
 
             return () => clearTimeout(timer);
         }
@@ -397,11 +397,11 @@ export const ShareChatUI = () => {
                     <div className="flex-1 overflow-hidden" style={{ backgroundColor: customBgColor }}>
                         <div className="h-full overflow-y-auto p-6 space-y-6">
                             {/* Human Support Button */}
-                            {enableHandover && showHumanSupportButton && !humanSupportRequested && !agentInfo && (
+                            {enableHandover && (showHumanSupportButton || messages.length >= 4) && !humanSupportRequested && !agentInfo && (
                                 <div className="flex justify-center mb-4">
                                     <button
                                         onClick={handleRequestHumanSupport}
-                                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-lg animate-pulse"
+                                        className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-lg"
                                     >
                                         <UserCheck className="w-4 h-4" />
                                         Talk to Human Agent
@@ -409,15 +409,6 @@ export const ShareChatUI = () => {
                                 </div>
                             )}
 
-                            {/* Debug info for testing */}
-                            {process.env.NODE_ENV === 'development' && (
-                                <div className="text-xs text-gray-500 bg-gray-100 p-2 rounded">
-                                    Debug: Messages: {messages.length}, EnableHandover: {enableHandover.toString()}, 
-                                    ShowButton: {showHumanSupportButton.toString()}, 
-                                    SupportRequested: {humanSupportRequested.toString()}, 
-                                    AgentConnected: {!!agentInfo}
-                                </div>
-                            )}
 
                             {/* Contact Form Modal */}
                             {showContactForm && (

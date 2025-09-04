@@ -7,6 +7,7 @@ import {
     updateSessionStatus,
     requestHumanSupport,
     getActiveSupportSessions,
+    getAllActiveSessions,
     assignAgentToSession,
     sendAgentMessage,
     getAgentActiveSessions
@@ -21,6 +22,7 @@ router.put("/session/:sessionId/resolve",authenticateToken,markSessionAsResolved
 router.put("/session/:sessionId/status",authenticateToken,updateSessionStatus)
 router.post("/session/:sessionId/request-support", requestHumanSupport)
 router.get("/bot/:botId/support-sessions", authenticateToken, getActiveSupportSessions)
+router.get("/bot/:botId/all-sessions", authenticateToken, getAllActiveSessions)
 router.post("/session/:sessionId/assign-agent", authenticateToken, assignAgentToSession)
 router.post("/session/:sessionId/agent-message", authenticateToken, sendAgentMessage)
 router.get("/bot/:botId/agent-sessions", authenticateToken, getAgentActiveSessions)

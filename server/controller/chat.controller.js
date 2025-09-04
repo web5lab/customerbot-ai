@@ -10,6 +10,8 @@ import Lead from '../models/Lead.schema.js';
 import { notifyAgents, notifySession } from '../services/socketService.js';
 import mongoose from 'mongoose';
 
+// Import the new function
+export { getAllActiveSessions } from './chat.controller.js';
 export const AiChatController = async (req, res) => {
     try {
         const { message, botId, sessionId, leadData } = req.body;
@@ -387,6 +389,44 @@ export const getActiveSupportSessions = async (req, res) => {
     }
 };
 
+// Get all active sessions for agents to join proactively
+export const getAllActiveSessions = async (req, res) => {
+    try {
+        const { botId } = req.params;
+        const userId = req.user.userId;
+
+        if (!mongoose.Types.ObjectId.isValid(botId)) {
+            return res.status(400).json({ message: 'Invalid Bot ID' });
+        }
+
+        // Verify user has access to this bot
+        const team = await mongoose.model('Team').findOne({
+            botId,
+            'members.userId': userId,
+            'members.status': 'active'
+        });
+
+        if (!team) {
+            return res.status(403).json({ message: 'Access denied' });
+        }
+
+        // Get all active sessions (not assigned to any agent yet)
+        const sessions = await SessionSchema.find({
+            botId,
+            status: 'active',
+            assignedAgent: null,
+            messageCount: { $gt: 0 } // Only sessions with messages
+        }).sort({ timestamp: -1 }); // Newest first
+
+        res.status(200).json({ sessions });
+    } catch (error) {
+        console.error('Error fetching all active sessions:', error);
+        res.status(500).json({
+            error: 'Error fetching all active sessions',
+            details: error.message
+        });
+    }
+};
 // Assign agent to session
 export const assignAgentToSession = async (req, res) => {
     try {

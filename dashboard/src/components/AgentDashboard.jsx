@@ -9,13 +9,17 @@ import {
   Send,
   Phone,
   Mail,
-  Star
+  Star,
+  Eye,
+  UserPlus
 } from 'lucide-react';
 import socketService from '../services/socketService';
+import toast from 'react-hot-toast';
 
 export function AgentDashboard({ botId, onSessionSelect }) {
   const [activeSessions, setActiveSessions] = useState([]);
   const [supportQueue, setSupportQueue] = useState([]);
+  const [allSessions, setAllSessions] = useState([]);
   const [connectedSessions, setConnectedSessions] = useState(new Set());
   const [agentStats, setAgentStats] = useState({
     activeChats: 0,
@@ -50,6 +54,10 @@ export function AgentDashboard({ botId, onSessionSelect }) {
         setActiveSessions(data.sessions || []);
       });
 
+      // Listen for all sessions update
+      socketService.on('all-sessions-update', (data) => {
+        setAllSessions(data.sessions || []);
+      });
       // Listen for session taken by other agents
       socketService.on('session-taken', (data) => {
         setSupportQueue(prev => prev.filter(s => s.sessionId !== data.sessionId));
@@ -71,12 +79,20 @@ export function AgentDashboard({ botId, onSessionSelect }) {
             ? { ...session, lastMessage: data.message.content, hasNewMessage: true }
             : session
         ));
+        
+        // Update in all sessions list
+        setAllSessions(prev => prev.map(session => 
+          session._id === data.sessionId 
+            ? { ...session, lastMessage: data.message.content, hasNewMessage: true }
+            : session
+        ));
       });
 
       // Listen for session resolved
       socketService.on('session-resolved', (data) => {
         setActiveSessions(prev => prev.filter(s => s._id !== data.sessionId));
         setSupportQueue(prev => prev.filter(s => s.sessionId !== data.sessionId));
+        setAllSessions(prev => prev.filter(s => s._id !== data.sessionId));
         setConnectedSessions(prev => {
           const newSet = new Set(prev);
           newSet.delete(data.sessionId);
@@ -93,6 +109,7 @@ export function AgentDashboard({ botId, onSessionSelect }) {
       // Fetch initial data
       fetchActiveSessions();
       fetchSupportQueue();
+      fetchAllSessions();
       return () => {
         socketService.removeAllListeners();
       };
@@ -144,6 +161,28 @@ export function AgentDashboard({ botId, onSessionSelect }) {
     }
   };
   const handleTakeSession = async (sessionId) => {
+  const fetchAllSessions = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/chat/get-chat-sessions/${botId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        // Filter for active sessions only
+        const activeSessions = data.filter(session => 
+          session.status === 'active' && 
+          session.messageCount > 0
+        );
+        setAllSessions(activeSessions);
+      }
+    } catch (error) {
+      console.error('Error fetching all sessions:', error);
+    }
+  };
     try {
       socketService.takeSession(sessionId);
       setConnectedSessions(prev => new Set([...prev, sessionId]));
@@ -162,6 +201,44 @@ export function AgentDashboard({ botId, onSessionSelect }) {
     }
   };
 
+  const handleJoinSession = async (session) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/chat/session/${session._id}/assign-agent`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        // Join the session via socket
+        socketService.takeSession(session._id);
+        setConnectedSessions(prev => new Set([...prev, session._id]));
+        
+        // Add to active sessions if not already there
+        setActiveSessions(prev => {
+          const exists = prev.find(s => s._id === session._id);
+          if (!exists) {
+            return [...prev, session];
+          }
+          return prev;
+        });
+        
+        // Remove from all sessions list
+        setAllSessions(prev => prev.filter(s => s._id !== session._id));
+        
+        // Select this session
+        onSessionSelect?.(session);
+        
+        toast.success('Joined session successfully');
+      }
+    } catch (error) {
+      console.error('Error joining session:', error);
+      toast.error('Failed to join session');
+    }
+  };
   const formatTime = (timestamp) => {
     return new Date(timestamp).toLocaleTimeString([], { 
       hour: '2-digit', 
@@ -213,14 +290,79 @@ export function AgentDashboard({ botId, onSessionSelect }) {
         </div>
       </div>
 
+      {/* All Active Sessions - Agents can join any session */}
+      {allSessions.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Eye className="w-5 h-5 text-blue-500" />
+            <h3 className="text-lg font-semibold text-gray-900">
+              All Active Sessions ({allSessions.length})
+            </h3>
+            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+              Join any session
+            </span>
+          </div>
+          <div className="space-y-3 max-h-60 overflow-y-auto">
+            {allSessions.map((session) => (
+              <div key={session._id} className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <MessageSquare className="w-4 h-4 text-blue-500" />
+                      <span className="font-medium text-blue-800">
+                        {session.title || `Chat Session ${session._id.slice(-6)}`}
+                      </span>
+                      {session.hasNewMessage && (
+                        <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
+                      )}
+                    </div>
+                    <p className="text-sm text-blue-700 mb-2">
+                      {session.lastMessage || 'Active conversation'}
+                    </p>
+                    <div className="flex items-center gap-4 text-xs text-blue-600">
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {formatTime(session.timestamp)}
+                      </span>
+                      <span>• {session.messageCount || 0} messages</span>
+                      {session.customerName && (
+                        <span className="flex items-center gap-1">
+                          <User className="w-3 h-3" />
+                          {session.customerName}
+                        </span>
+                      )}
+                      {session.customerEmail && (
+                        <span className="flex items-center gap-1">
+                          <Mail className="w-3 h-3" />
+                          {session.customerEmail}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleJoinSession(session)}
+                    className="ml-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium flex items-center gap-2"
+                  >
+                    <UserPlus className="w-4 h-4" />
+                    Join Chat
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
       {/* Support Queue */}
       {supportQueue.length > 0 && (
         <div className="mb-6">
           <div className="flex items-center gap-2 mb-4">
             <AlertCircle className="w-5 h-5 text-red-500" />
             <h3 className="text-lg font-semibold text-gray-900">
-              Support Queue ({supportQueue.length})
+              Urgent Support Requests ({supportQueue.length})
             </h3>
+            <span className="text-xs bg-red-100 text-red-700 px-2 py-1 rounded-full">
+              Customer requested help
+            </span>
           </div>
           <div className="space-y-3 max-h-60 overflow-y-auto">
             {supportQueue.map((item) => (
@@ -230,7 +372,7 @@ export function AgentDashboard({ botId, onSessionSelect }) {
                     <div className="flex items-center gap-2 mb-2">
                       <AlertCircle className="w-4 h-4 text-red-500" />
                       <span className="font-medium text-red-800">
-                        Customer Support Request
+                        Urgent: Customer Requested Help
                       </span>
                     </div>
                     <p className="text-sm text-red-700 mb-2">
@@ -271,7 +413,7 @@ export function AgentDashboard({ botId, onSessionSelect }) {
       {/* Active Sessions */}
       <div>
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
-          Active Sessions ({activeSessions.length})
+          My Active Sessions ({activeSessions.length})
         </h3>
         {activeSessions.length > 0 ? (
           <div className="space-y-3">
