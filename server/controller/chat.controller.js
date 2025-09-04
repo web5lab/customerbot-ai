@@ -10,8 +10,6 @@ import Lead from '../models/Lead.schema.js';
 import { notifyAgents, notifySession } from '../services/socketService.js';
 import mongoose from 'mongoose';
 
-// Import the new function
-export { getAllActiveSessions } from './chat.controller.js';
 export const AiChatController = async (req, res) => {
     try {
         const { message, botId, sessionId, leadData } = req.body;
