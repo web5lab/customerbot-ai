@@ -1,7 +1,10 @@
 import { CreditCard, Package, Zap, CheckCircle, Brain, MessageSquare, Database, Cpu, Crown, Star, TrendingUp, Shield, Gift, Sparkles, ArrowRight, Plus, Minus } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { UpgradeModal } from '../components/UpgradeModal';
 import { AddOnModal } from '../components/AddOnModal';
+import { subscriptionSelector, usageStatsSelector } from '../store/global.Selctor';
+import { getUserSubscription, getUsageStats } from '../store/global.Action';
 
 const plans = [
   {
@@ -77,8 +80,16 @@ const usageStats = [
 ];
 
 export function Billing() {
+  const dispatch = useDispatch();
+  const subscription = useSelector(subscriptionSelector);
+  const usageStats = useSelector(usageStatsSelector);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [billingCycle, setBillingCycle] = useState('monthly');
+
+  useEffect(() => {
+    dispatch(getUserSubscription());
+    dispatch(getUsageStats());
+  }, [dispatch]);
 
   return (
     <div className="min-h-screen bg-white">
@@ -308,16 +319,6 @@ export function Billing() {
                 <div className="text-sm text-gray-600">Status</div>
               </div>
               <div className="text-center p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <div key={index} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
-                  <div>
-                    <div className="font-medium text-gray-900">{item.invoice}</div>
-                    <div className="text-sm text-gray-600">{item.date}</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="font-medium text-gray-900">{item.amount}</div>
-                    <div className="text-sm text-green-600">{item.status}</div>
-                  </div>
-                </div>
                 <div className="text-2xl font-bold text-gray-900 mb-1">
                   {subscription.billingCycle.charAt(0).toUpperCase() + subscription.billingCycle.slice(1)}
                 </div>
