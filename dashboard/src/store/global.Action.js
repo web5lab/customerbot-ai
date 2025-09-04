@@ -389,6 +389,26 @@ export const removeTeamMember = async ({ botId, memberId }) => {
     }
 };
 
+// Respond to team invitation
+export const respondToInvitation = async ({ invitationId, action }) => {
+    try {
+        const token = localStorage.getItem('authToken');
+        const response = await axiosInstance.post(`/team/invitation/${invitationId}/respond`, 
+            { action },
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            }
+        );
+        toast.success(action === 'accept' ? 'Invitation accepted!' : 'Invitation declined');
+        return response.data;
+    } catch (err) {
+        toast.error(`Failed to ${action} invitation`);
+        throw err;
+    }
+};
+
 export const getTeamPermissions =createAsyncThunk(
     "global/getTeamPermissions", async ({ botId }) => {
     try {

@@ -276,6 +276,8 @@ export const globalSlice = createSlice({
 export const { setLogedIn,
   setProfile,
   setBots,
+  setInvitations,
+  removeInvitation,
   setBotsActive,
   setUiConfig,
   addMessage,

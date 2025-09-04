@@ -469,6 +469,38 @@ export function Bots() {
             </div>
           </div>
 
+          {/* Team Invitations Section */}
+          {invitations.length > 0 && (
+            <div className="mb-8">
+              <div className="bg-white border border-gray-200 rounded-lg">
+                <div className="p-6 border-b border-gray-200">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center">
+                      <Users className="w-4 h-4 text-yellow-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">Team Invitations</h3>
+                      <p className="text-sm text-gray-600">
+                        You have {invitations.length} pending team invitation{invitations.length !== 1 ? 's' : ''}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <div className="p-6">
+                  <div className="space-y-4">
+                    {invitations.map((invitation) => (
+                      <InvitationCard
+                        key={invitation._id}
+                        invitation={invitation}
+                        onAccept={handleAcceptInvitation}
+                        onDecline={handleDeclineInvitation}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
           {/* Bots Grid */}
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">

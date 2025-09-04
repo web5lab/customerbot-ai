@@ -149,6 +149,28 @@ export const getChatBot = async (req, res) => {
             .map(team => team.botId)
             .filter(bot => bot !== null); // Filter out any null values
 
+        // Get pending invitations for this user
+        const pendingInvitations = await Team.find({
+            'members.userId': new mongoose.Types.ObjectId(id),
+            'members.status': 'pending'
+        }).populate('botId').populate('members.invitedBy', 'name email');
+
+        const invitations = pendingInvitations.map(team => {
+            const userMember = team.members.find(m => 
+                m.userId.toString() === id && m.status === 'pending'
+            );
+            
+            return {
+                _id: userMember._id,
+                botId: team.botId._id,
+                botName: team.botId.name,
+                botIcon: team.botId.icon,
+                role: userMember.role,
+                invitedBy: userMember.invitedBy,
+                invitedAt: userMember.joinedAt,
+                teamId: team._id
+            };
+        });
         // Combine owned bots and team bots, removing duplicates
         const allBotIds = new Set();
         const allBots = [];
@@ -184,7 +206,10 @@ export const getChatBot = async (req, res) => {
         });
 
         console.log('All accessible bots:', allBots.length);
-        res.status(200).json({ bots: allBots });
+        res.status(200).json({ 
+            bots: allBots, 
+            invitations: invitations 
+        });
     } catch (error) {
         console.error('Error fetching chatbot:', error);
         res.status(500).json({ message: 'Server error while fetching chatbot' });

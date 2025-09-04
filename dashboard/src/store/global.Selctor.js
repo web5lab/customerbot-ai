@@ -18,6 +18,10 @@ export const botsSelector = createSelector(
   (global) => global.bots
 );
 
+export const invitationsSelector = createSelector(
+  [globalSelector],
+  (global) => global.invitations
+);
 export const activeBotSelector = createSelector(
   [globalSelector],
   (global) => global.activeBot

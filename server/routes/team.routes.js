@@ -41,4 +41,6 @@ router.get('/accept-invitation', authenticateToken, acceptInvitationWithToken);
 // Get team permissions for current user
 router.get('/bot/:botId/permissions', authenticateToken, getTeamPermissions);
 
+// Accept or decline invitation
+router.post('/invitation/:invitationId/respond', authenticateToken, respondToInvitation);
 export default router;

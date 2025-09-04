@@ -496,3 +496,71 @@ export const acceptInvitationWithToken = async (req, res) => {
         res.status(500).json({ message: 'Server error while accepting invitation' });
     }
 };
+
+// Respond to team invitation (accept/decline)
+export const respondToInvitation = async (req, res) => {
+    try {
+        const { invitationId } = req.params;
+        const { action } = req.body; // 'accept' or 'decline'
+        const userId = req.user.userId;
+
+        if (!mongoose.Types.ObjectId.isValid(invitationId)) {
+            return res.status(400).json({ message: 'Invalid invitation ID' });
+        }
+
+        if (!['accept', 'decline'].includes(action)) {
+            return res.status(400).json({ message: 'Action must be either "accept" or "decline"' });
+        }
+
+        // Find the team with this member invitation
+        const team = await Team.findOne({
+            'members._id': new mongoose.Types.ObjectId(invitationId),
+            'members.userId': new mongoose.Types.ObjectId(userId),
+            'members.status': 'pending'
+        }).populate('botId', 'name');
+
+        if (!team) {
+            return res.status(404).json({ message: 'Invitation not found or already processed' });
+        }
+
+        const member = team.members.id(invitationId);
+        if (!member) {
+            return res.status(404).json({ message: 'Member not found' });
+        }
+
+        if (action === 'accept') {
+            member.status = 'active';
+            member.joinedAt = new Date();
+            await team.save();
+
+            // Send welcome email
+            try {
+                await sendWelcomeEmail({
+                    recipientEmail: member.email,
+                    recipientName: member.name,
+                    botName: team.botId.name,
+                    role: member.role
+                });
+            } catch (emailError) {
+                console.error('Error sending welcome email:', emailError);
+            }
+
+            res.status(200).json({ 
+                message: 'Invitation accepted successfully', 
+                team,
+                member
+            });
+        } else {
+            // Remove member from team for declined invitation
+            team.members.pull(invitationId);
+            await team.save();
+
+            res.status(200).json({ 
+                message: 'Invitation declined successfully'
+            });
+        }
+    } catch (error) {
+        console.error('Error responding to invitation:', error);
+        res.status(500).json({ message: 'Server error while responding to invitation' });
+    }
+};
