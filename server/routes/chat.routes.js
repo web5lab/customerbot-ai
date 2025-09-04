@@ -26,5 +26,6 @@ router.get("/bot/:botId/all-sessions", authenticateToken, getAllActiveSessions)
 router.post("/session/:sessionId/assign-agent", authenticateToken, assignAgentToSession)
 router.post("/session/:sessionId/agent-message", authenticateToken, sendAgentMessage)
 router.get("/bot/:botId/agent-sessions", authenticateToken, getAgentActiveSessions)
+router.delete("/sessions/:sessionId", authenticateToken, deleteSession)
 
 export default router;
