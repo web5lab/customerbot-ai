@@ -10,6 +10,7 @@ import authRoutes from './routes/auth.routes.js';
 import botRoutes from './routes/bot.routes.js';
 import scrapDataRoutes from './routes/scrapper.routes.js';
 import teamRoutes from './routes/team.routes.js';
+import statsRoutes from './routes/stats.routes.js';
 import './config/passport.js';
 import { databaseConnection } from './db/db.js';
 import dotenv from 'dotenv';
@@ -60,6 +61,7 @@ app.use('/auth', authRoutes);
 app.use('/bot', botRoutes);
 app.use('/scrap-data', scrapDataRoutes);
 app.use('/team', teamRoutes);
+app.use('/stats', statsRoutes);
 
 // Basic error handling
 app.use((err, req, res, next) => {

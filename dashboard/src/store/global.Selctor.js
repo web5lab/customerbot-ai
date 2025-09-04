@@ -76,3 +76,18 @@ export const teamPermissionsSelector = createSelector(
   [globalSelector],
   (global) => global.teamPermissions
 );
+
+export const dashboardStatsSelector = createSelector(
+  [globalSelector],
+  (global) => global.dashboardStats
+);
+
+export const botStatsSelector = createSelector(
+  [globalSelector],
+  (global) => global.botStats
+);
+
+export const chartDataSelector = createSelector(
+  [globalSelector],
+  (global) => global.chartData
+);

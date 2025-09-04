@@ -1,5 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit'
 import { GetBots, getChatSession, getChatSessions, GetUserData, updateChatBot, getBotTeam, getUserTeams } from './global.Action'
+import { getBotStats, getDashboardStats, getChartData } from './global.Action'
 
 const initialState = {
   logedIn: false,
@@ -12,6 +13,9 @@ const initialState = {
   teams: [],
   currentTeam: null,
   teamPermissions: null,
+  dashboardStats: null,
+  botStats: null,
+  chartData: null,
   uiConfig: {
     messages: [{ role: 'bot', content: 'Hello! How can I help you today?' }],
     selectedPalette: 0, // index of the selected palette
@@ -277,6 +281,36 @@ export const globalSlice = createSlice({
       })
       .addCase(getUserTeams.fulfilled, (state, action) => {
         state.teams = action.payload.teams || [];
+      });
+    builder
+      .addCase(getBotStats.pending, (state) => {
+        state.botStats = null;
+      })
+      .addCase(getBotStats.rejected, (state, action) => {
+        state.botStats = null;
+      })
+      .addCase(getBotStats.fulfilled, (state, action) => {
+        state.botStats = action.payload.stats || null;
+      });
+    builder
+      .addCase(getDashboardStats.pending, (state) => {
+        state.dashboardStats = null;
+      })
+      .addCase(getDashboardStats.rejected, (state, action) => {
+        state.dashboardStats = null;
+      })
+      .addCase(getDashboardStats.fulfilled, (state, action) => {
+        state.dashboardStats = action.payload || null;
+      });
+    builder
+      .addCase(getChartData.pending, (state) => {
+        state.chartData = null;
+      })
+      .addCase(getChartData.rejected, (state, action) => {
+        state.chartData = null;
+      })
+      .addCase(getChartData.fulfilled, (state, action) => {
+        state.chartData = action.payload.chartData || null;
       });
   }
 })

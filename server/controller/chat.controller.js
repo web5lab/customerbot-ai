@@ -4,6 +4,7 @@ import Platform from '../models/Platform.schema.js';
 import { getChatResponse } from '../services/gemini.js';
 import SessionSchema from '../models/Session.schema.js';
 import { queryVectorData } from '../services/vectorServices.js';
+import { updateBotStats } from './stats.controller.js';
 
 export const AiChatController = async (req, res) => {
     try {
@@ -58,6 +59,14 @@ export const AiChatController = async (req, res) => {
         // Deduct platform credits
         platform.remainingCredits -= 1;
         await platform.save();
+
+        // Update bot statistics
+        try {
+            await updateBotStats(botId);
+        } catch (statsError) {
+            console.error('Error updating stats:', statsError);
+            // Don't fail the chat if stats update fails
+        }
 
         res.status(201).json({
             message: 'Message sent',

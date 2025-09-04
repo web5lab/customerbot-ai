@@ -423,3 +423,54 @@ export const getTeamPermissions =createAsyncThunk(
         throw err;
     }
 });
+// Stats Actions
+export const getBotStats = createAsyncThunk(
+    "global/getBotStats",
+    async ({ botId }) => {
+        try {
+            const token = localStorage.getItem('authToken');
+            const response = await axiosInstance.get(`/stats/bot/${botId}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            return response.data;
+        } catch (err) {
+            throw err;
+        }
+    }
+);
+
+export const getDashboardStats = createAsyncThunk(
+    "global/getDashboardStats",
+    async () => {
+        try {
+            const token = localStorage.getItem('authToken');
+            const response = await axiosInstance.get(`/stats/dashboard`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            return response.data;
+        } catch (err) {
+            throw err;
+        }
+    }
+);
+
+export const getChartData = createAsyncThunk(
+    "global/getChartData",
+    async ({ botId, period = '7d' }) => {
+        try {
+            const token = localStorage.getItem('authToken');
+            const response = await axiosInstance.get(`/stats/bot/${botId}/chart?period=${period}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            return response.data;
+        } catch (err) {
+            throw err;
+        }
+    }
+);
