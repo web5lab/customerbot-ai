@@ -79,7 +79,7 @@ function AppLayout() {
   if (isLandingPage) {
     // Render landing layout without Sidebar/Header
     return (
-      <div className="min-h-screen flex flex-col bg-white">
+      <div className="min-h-screen flex flex-col dark:bg-dark-900">
         <Navigation />
         <div className="mt-8 flex-grow">
           <HomePage />

@@ -22,6 +22,11 @@ const BotConfigSchema = new mongoose.Schema({
         type: String,
         default: 'hey there! I am here to assist you. How can I help?'
     },
+    themeMode: {
+        type: String,
+        enum: ['light', 'dark'],
+        default: 'light'
+    },
     primaryColour: {
         type: String,
         default: '#000000'

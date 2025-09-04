@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
@@ -56,6 +57,13 @@ export default {
           300: '#cbd5e1',
           400: '#94a3b8',
           500: '#64748b',
+        },
+        dark: {
+          100: '#1e1e1e',
+          200: '#2d2d2d',
+          300: '#3d3d3d',
+          400: '#4d4d4d',
+          500: '#5d5d5d',
         }
       },
       borderRadius: {
