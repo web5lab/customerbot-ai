@@ -333,7 +333,7 @@ export const updateTeamSettings = async (req, res) => {
         // Update settings
         if (typeof allowInvites === 'boolean') team.settings.allowInvites = allowInvites;
         if (maxMembers && maxMembers > 0) team.settings.maxMembers = maxMembers;
-        if (defaultRole && ['editor', 'viewer'].includes(defaultRole)) team.settings.defaultRole = defaultRole;
+        if (defaultRole && ['editor', 'viewer', 'agent'].includes(defaultRole)) team.settings.defaultRole = defaultRole;
 
         await team.save();
 

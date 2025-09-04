@@ -212,6 +212,12 @@ export function TeamMemberCard({
                 <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">View Analytics</span>
               </>
             )}
+            {member.role === 'agent' && (
+              <>
+                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">Handle Support</span>
+                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">Join Sessions</span>
+              </>
+            )}
             {member.role === 'viewer' && (
               <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full">View Only</span>
             )}
