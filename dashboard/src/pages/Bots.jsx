@@ -248,7 +248,7 @@ export function Bots() {
   const [sortBy, setSortBy] = useState('name');
   const [filterStatus, setFilterStatus] = useState('all');
   const botsData = useSelector(botsSelector);
-  const invitations = useSelector(invitationsSelector);
+  const invitations = useSelector(invitationsSelector) || [];
   const dispatch = useDispatch();
 
   const handleBotSelect = (bot) => {

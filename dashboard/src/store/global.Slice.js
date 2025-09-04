@@ -5,6 +5,7 @@ const initialState = {
   logedIn: false,
   profile: null,
   bots: [],
+  invitations: [],
   activeBot: null,
   chatSessions: [],
   activeSession: null,
@@ -76,6 +77,7 @@ export const globalSlice = createSlice({
       state.logedIn = false
       state.profile = null
       state.bots = []
+      state.invitations = []
       state.activeBot = null
       state.chatSessions = []
       state.activeSession = null
@@ -131,6 +133,12 @@ export const globalSlice = createSlice({
     },
     setBots: (state, action) => {
       state.bots = action.payload
+    },
+    setInvitations: (state, action) => {
+      state.invitations = action.payload
+    },
+    removeInvitation: (state, action) => {
+      state.invitations = state.invitations.filter(inv => inv._id !== action.payload)
     },
     setBotsActive: (state, action) => {
       state.activeBot = action.payload;
@@ -229,6 +237,7 @@ export const globalSlice = createSlice({
     builder
       .addCase(GetBots.fulfilled, (state, action) => {
         state.bots = action.payload.bots || [];
+        state.invitations = action.payload.invitations || [];
       });
     builder
       .addCase(getChatSessions.pending, (state) => {
@@ -276,6 +285,8 @@ export const globalSlice = createSlice({
 export const { setLogedIn,
   setProfile,
   setBots,
+  setInvitations,
+  removeInvitation,
   setInvitations,
   removeInvitation,
   setBotsActive,

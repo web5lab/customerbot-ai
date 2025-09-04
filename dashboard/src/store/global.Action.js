@@ -393,7 +393,7 @@ export const removeTeamMember = async ({ botId, memberId }) => {
 export const respondToInvitation = async ({ invitationId, action }) => {
     try {
         const token = localStorage.getItem('authToken');
-        const response = await axiosInstance.post(`/team/invitation/${invitationId}/respond`, 
+        const response = await axiosInstance.post(`/team/invitation/${invitationId}/respond`,
             { action },
             {
                 headers: {
