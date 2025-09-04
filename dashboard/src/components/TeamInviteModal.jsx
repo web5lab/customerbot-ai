@@ -16,6 +16,11 @@ const ROLE_DESCRIPTIONS = {
     title: 'Viewer',
     description: 'Read-only access to conversations, basic analytics, and bot performance',
     permissions: ['View conversations', 'Basic analytics', 'Export data', 'View bot status']
+  },
+  agent: {
+    title: 'Support Agent',
+    description: 'Handle customer support sessions and respond to chat requests',
+    permissions: ['Join customer sessions', 'Respond to support requests', 'View conversations', 'Resolve tickets']
   }
 };
 
