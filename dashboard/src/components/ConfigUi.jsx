@@ -90,7 +90,6 @@ export function ConfigUI() {
         customPrimaryColor: '#3B82F6',
         customSecondaryColor: '#1c1d1d',
         customBgColor: '#f0f9ff',
-        themeMode: 'light',
         selectedFontSize: '16px',
         chatSize: 'medium',
         animationStyle: 'slide-up',
