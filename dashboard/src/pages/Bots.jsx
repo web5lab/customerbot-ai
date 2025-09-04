@@ -24,11 +24,12 @@ import {
 } from 'lucide-react';
 import { useBot } from '../contexts/BotContext';
 import { CreateBotModal } from '../components/CreateBotModal';
-import { botsSelector } from '../store/global.Selctor';
+import { botsSelector, invitationsSelector } from '../store/global.Selctor';
 import { useSelector, useDispatch } from 'react-redux';
 import { setBotsActive } from '../store/global.Slice';
 import logo from '../assets/logo.png';
-import { DeleteChatBot, GetBots } from '../store/global.Action';
+import { DeleteChatBot, GetBots, respondToInvitation } from '../store/global.Action';
+import { InvitationCard } from '../components/InvitationCard';
 
 // Simple dropdown component
 const SimpleDropdown = ({ trigger, children }) => {
@@ -247,6 +248,7 @@ export function Bots() {
   const [sortBy, setSortBy] = useState('name');
   const [filterStatus, setFilterStatus] = useState('all');
   const botsData = useSelector(botsSelector);
+  const invitations = useSelector(invitationsSelector);
   const dispatch = useDispatch();
 
   const handleBotSelect = (bot) => {
@@ -273,6 +275,24 @@ export function Bots() {
     e.stopPropagation();
     setSelectedBotForSharing(bot);
     setShowSharingModal(true);
+  };
+
+  const handleAcceptInvitation = async (invitationId) => {
+    try {
+      await dispatch(respondToInvitation({ invitationId, action: 'accept' })).unwrap();
+      dispatch(GetBots()); // Refresh bots list
+    } catch (error) {
+      console.error('Error accepting invitation:', error);
+    }
+  };
+
+  const handleDeclineInvitation = async (invitationId) => {
+    try {
+      await dispatch(respondToInvitation({ invitationId, action: 'decline' })).unwrap();
+      dispatch(GetBots()); // Refresh bots list
+    } catch (error) {
+      console.error('Error declining invitation:', error);
+    }
   };
 
   const filteredBots = useMemo(() => {
@@ -320,7 +340,10 @@ export function Bots() {
                 <img src={logo} className="w-8 h-8" alt="CustomerBot" />
                 <div>
                   <h1 className="text-2xl font-bold text-gray-900">My AI Assistants</h1>
-                  <p className="text-gray-600">{botsData.length} bots available</p>
+                  <p className="text-gray-600">
+                    {botsData.length} bots available
+                    {invitations.length > 0 && `, ${invitations.length} pending invitation${invitations.length !== 1 ? 's' : ''}`}
+                  </p>
                 </div>
               </div>
             </div>

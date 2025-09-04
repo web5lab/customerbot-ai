@@ -178,16 +178,16 @@ export function Sidebar() {
                     <h2 className="text-base font-bold text-gray-900 truncate">
                       {activeBot?.name || 'Select Bot'}
                     </h2>
-                    <p className="text-sm text-gray-600 flex items-center gap-1">
+                    <div className="text-sm text-gray-600 flex items-center gap-1">
                       {activeBot ? (
                         <>
                           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                          Active bot
+                          <span>Active bot</span>
                         </>
                       ) : (
-                        'Choose a bot'
+                        <span>Choose a bot</span>
                       )}
-                    </p>
+                    </div>
                   </div>
                   <ChevronDown className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${showBotSelector ? 'rotate-180' : ''}`} />
                 </button>
