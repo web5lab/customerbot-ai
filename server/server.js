@@ -12,6 +12,7 @@ import scrapDataRoutes from './routes/scrapper.routes.js';
 import teamRoutes from './routes/team.routes.js';
 import statsRoutes from './routes/stats.routes.js';
 import subscriptionRoutes from './routes/subscription.routes.js';
+import leadsRoutes from './routes/leads.routes.js';
 import { initializeCronJobs } from './services/cronJobs.js';
 import './config/passport.js';
 import { databaseConnection } from './db/db.js';
@@ -65,6 +66,7 @@ app.use('/scrap-data', scrapDataRoutes);
 app.use('/team', teamRoutes);
 app.use('/stats', statsRoutes);
 app.use('/subscription', subscriptionRoutes);
+app.use('/leads', leadsRoutes);
 
 // Basic error handling
 app.use((err, req, res, next) => {

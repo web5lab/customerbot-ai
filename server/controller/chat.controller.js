@@ -6,10 +6,11 @@ import SessionSchema from '../models/Session.schema.js';
 import { queryVectorData } from '../services/vectorServices.js';
 import { updateBotStats } from './stats.controller.js';
 import { useCredit, checkSubscriptionLimits } from '../services/subscriptionService.js';
+import Lead from '../models/Lead.schema.js';
 
 export const AiChatController = async (req, res) => {
     try {
-        const { message, botId, sessionId } = req.body;
+        const { message, botId, sessionId, leadData } = req.body;
         const userId = req.user?.userId;
 
         // Find bot configuration
@@ -92,6 +93,42 @@ export const AiChatController = async (req, res) => {
             platform.remainingCredits -= 1;
             await platform.save();
             console.log(`Platform credit used for anonymous user: 1 credit deducted`);
+        }
+
+        // Handle lead capture if lead data is provided
+        if (leadData && (leadData.email || leadData.name || leadData.phone)) {
+            try {
+                // Check if lead already exists for this session
+                let existingLead = await Lead.findOne({ sessionId: session._id });
+                
+                if (existingLead) {
+                    // Update existing lead with new information
+                    if (leadData.name) existingLead.name = leadData.name;
+                    if (leadData.email) existingLead.email = leadData.email;
+                    if (leadData.phone) existingLead.phone = leadData.phone;
+                    if (leadData.company) existingLead.company = leadData.company;
+                    
+                    existingLead.calculateLeadScore();
+                    await existingLead.save();
+                } else {
+                    // Create new lead
+                    const newLead = new Lead({
+                        botId,
+                        sessionId: session._id,
+                        ...leadData,
+                        source: 'website_chat',
+                        conversationData: {
+                            totalMessages: session.messageCount,
+                            lastMessage: aiResponse
+                        }
+                    });
+                    newLead.calculateLeadScore();
+                    await newLead.save();
+                }
+            } catch (leadError) {
+                console.error('Error handling lead capture:', leadError);
+                // Don't fail the chat if lead capture fails
+            }
         }
 
         // Update bot statistics

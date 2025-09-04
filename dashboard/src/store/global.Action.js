@@ -526,3 +526,118 @@ export const updateSubscriptionPlan = async ({ planType, billingCycle }) => {
         throw err;
     }
 };
+
+// Leads Actions
+export const getLeads = createAsyncThunk(
+    "global/getLeads",
+    async (queryParams = '') => {
+        try {
+            const token = localStorage.getItem('authToken');
+            const response = await axiosInstance.get(`/leads?${queryParams}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            return response.data;
+        } catch (err) {
+            throw err;
+        }
+    }
+);
+
+export const getLeadStats = createAsyncThunk(
+    "global/getLeadStats",
+    async (queryParams = '') => {
+        try {
+            const token = localStorage.getItem('authToken');
+            const response = await axiosInstance.get(`/leads/stats?${queryParams}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            return response.data;
+        } catch (err) {
+            throw err;
+        }
+    }
+);
+
+export const createLead = createAsyncThunk(
+    "global/createLead",
+    async (leadData) => {
+        try {
+            const token = localStorage.getItem('authToken');
+            const response = await axiosInstance.post(`/leads`, leadData, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            return response.data;
+        } catch (err) {
+            throw err;
+        }
+    }
+);
+
+export const updateLead = createAsyncThunk(
+    "global/updateLead",
+    async ({ leadId, updates }) => {
+        try {
+            const token = localStorage.getItem('authToken');
+            const response = await axiosInstance.put(`/leads/${leadId}`, updates, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            return response.data;
+        } catch (err) {
+            throw err;
+        }
+    }
+);
+
+export const deleteLead = createAsyncThunk(
+    "global/deleteLead",
+    async (leadId) => {
+        try {
+            const token = localStorage.getItem('authToken');
+            const response = await axiosInstance.delete(`/leads/${leadId}`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            return response.data;
+        } catch (err) {
+            throw err;
+        }
+    }
+);
+
+export const exportLeads = createAsyncThunk(
+    "global/exportLeads",
+    async (exportData) => {
+        try {
+            const token = localStorage.getItem('authToken');
+            const response = await axiosInstance.post(`/leads/export`, exportData, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                },
+                responseType: 'blob'
+            });
+            
+            // Create download link
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `leads-${new Date().toISOString().split('T')[0]}.${exportData.format}`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+            
+            return response.data;
+        } catch (err) {
+            throw err;
+        }
+    }
+);
