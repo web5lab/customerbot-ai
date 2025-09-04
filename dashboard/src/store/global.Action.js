@@ -64,7 +64,6 @@ export const createBotApi = async ({ data }) => {
 export const GetBots = createAsyncThunk(
     "global/getBots",
     async () => {
-        console.log("get data api call")
         try {
             const token = localStorage.getItem('authToken');
             const Response = await axiosInstance.get(`/bot/get-bot`, {
@@ -73,6 +72,7 @@ export const GetBots = createAsyncThunk(
                 }
             });
             console.log("api data", Response);
+            console.log("Invitations received:", Response.data.invitations);
             return Response.data;
         } catch (err) {
             console.log("api err 1 =>", err);

@@ -127,7 +127,7 @@ export const inviteTeamMember = async (req, res) => {
 
         // Add member to team
         const newMember = {
-            userId: invitedUser._id,
+            userId: invitedUser._id || null,
             email,
             name: invitedUser.name,
             role,

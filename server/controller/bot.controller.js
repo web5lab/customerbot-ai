@@ -151,13 +151,13 @@ export const getChatBot = async (req, res) => {
 
         // Get pending invitations for this user
         const pendingInvitations = await Team.find({
-            'members.userId': new mongoose.Types.ObjectId(id),
+            'members.email': user.email,
             'members.status': 'pending'
         }).populate('botId').populate('members.invitedBy', 'name email');
 
         const invitations = pendingInvitations.map(team => {
             const userMember = team.members.find(m => 
-                m.userId.toString() === id && m.status === 'pending'
+                m.email === user.email && m.status === 'pending'
             );
             
             return {
@@ -170,7 +170,7 @@ export const getChatBot = async (req, res) => {
                 invitedAt: userMember.joinedAt,
                 teamId: team._id
             };
-        });
+        }).filter(invitation => invitation._id); // Filter out any null invitations
         // Combine owned bots and team bots, removing duplicates
         const allBotIds = new Set();
         const allBots = [];

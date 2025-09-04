@@ -251,6 +251,12 @@ export function Bots() {
   const invitations = useSelector(invitationsSelector) || [];
   const dispatch = useDispatch();
 
+  // Debug logging
+  useEffect(() => {
+    console.log("Bots data:", botsData);
+    console.log("Invitations data:", invitations);
+  }, [botsData, invitations]);
+
   const handleBotSelect = (bot) => {
     if (bot) {
       setSelectedBot(bot);

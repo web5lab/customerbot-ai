@@ -236,8 +236,10 @@ export const globalSlice = createSlice({
       });
     builder
       .addCase(GetBots.fulfilled, (state, action) => {
+        console.log("GetBots fulfilled payload:", action.payload);
         state.bots = action.payload.bots || [];
         state.invitations = action.payload.invitations || [];
+        console.log("Set invitations in state:", state.invitations);
       });
     builder
       .addCase(getChatSessions.pending, (state) => {
