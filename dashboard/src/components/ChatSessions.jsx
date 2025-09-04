@@ -1,4 +1,4 @@
-import { MessageSquare, Search, Clock, Trash2, Star } from 'lucide-react';
+import { MessageSquare, Search, Clock, Trash2, Star, User, AlertCircle, UserCheck } from 'lucide-react';
 import { useState } from 'react';
 
 export function ChatSessions({ sessions, onSessionSelect, onSessionDelete }) {
@@ -74,10 +74,19 @@ export function ChatSessions({ sessions, onSessionSelect, onSessionDelete }) {
                   {/* Session Icon */}
                   <div className="relative">
                     <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center border border-gray-200">
-                      <MessageSquare className="w-5 h-5 text-gray-600" />
+                      {session.needsHumanSupport ? (
+                        <UserCheck className="w-5 h-5 text-yellow-600" />
+                      ) : session.assignedAgent ? (
+                        <User className="w-5 h-5 text-blue-600" />
+                      ) : (
+                        <MessageSquare className="w-5 h-5 text-gray-600" />
+                      )}
                     </div>
                     {session.isPinned && (
                       <div className="absolute -top-1 -right-1 w-3 h-3 bg-yellow-500 rounded-full"></div>
+                    )}
+                    {session.needsHumanSupport && (
+                      <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
                     )}
                   </div>
 
@@ -108,6 +117,12 @@ export function ChatSessions({ sessions, onSessionSelect, onSessionDelete }) {
                         <span>• {session.messageCount || 0} messages</span>
                         {session.status && (
                           <span>• {session.status}</span>
+                        )}
+                        {session.needsHumanSupport && (
+                          <span className="text-yellow-600 font-medium">• Needs Support</span>
+                        )}
+                        {session.assignedAgent && (
+                          <span className="text-blue-600 font-medium">• Agent Assigned</span>
                         )}
                       </div>
 
