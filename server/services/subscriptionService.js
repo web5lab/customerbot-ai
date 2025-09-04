@@ -2,6 +2,7 @@ import Subscription from '../models/Subscription.schema.js';
 import Platform from '../models/Platform.schema.js';
 import User from '../models/User.schema.js';
 import { sendSubscriptionRenewalNotification, sendSubscriptionExpiryWarning, sendSubscriptionExpiredNotification } from './emailService.js';
+import mongoose from 'mongoose';
 
 // Plan configurations
 const PLAN_CONFIGS = {
