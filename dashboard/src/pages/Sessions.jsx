@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { api } from '../services/api';
 import { useDispatch, useSelector } from 'react-redux';
 import { getChatSessions } from '../store/global.Action';
-import toast from 'react-hot-toast';
+import { toastLoader } from '../components/ToastLoader';
 import { activeBotSelector, SessionsSelector } from '../store/global.Selctor';
 import { MessageSquare, Send, Download, Trash2, Edit3, Bot, User, Clock, CheckCircle, Star, Tag, AlertCircle, MoreHorizontal, UserCheck, Phone } from 'lucide-react';
 import socketService from '../services/socketService';
@@ -142,8 +142,17 @@ export function Sessions() {
   }, [selectedSession]);
 
   const handleDeleteSession = async (sessionId) => {
+    // Show loading toast
+    const loadingToastId = toastLoader.loading(
+      'Deleting Session',
+      'Please wait while we delete the conversation...'
+    );
+
     try {
       await api.deleteSession(sessionId);
+      
+      // Dismiss loading toast
+      toastLoader.dismiss(loadingToastId);
       
       // Update local state to remove the deleted session
       dispatch(getChatSessions({ botId: activeBot._id }));
@@ -155,10 +164,19 @@ export function Sessions() {
       }
       
       // Show success message
-      toast.success('Session deleted successfully');
+      toastLoader.success(
+        'Session Deleted',
+        'The conversation has been permanently removed'
+      );
     } catch (error) {
+      // Dismiss loading toast
+      toastLoader.dismiss(loadingToastId);
+      
       console.error('Error deleting session:', error);
-      toast.error('Failed to delete session');
+      toastLoader.error(
+        'Delete Failed',
+        'Unable to delete the session. Please try again.'
+      );
     }
   };
 
