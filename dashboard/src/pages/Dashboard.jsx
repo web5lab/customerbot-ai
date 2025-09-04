@@ -103,35 +103,6 @@ export function Dashboard() {
     },
   ];
 
-  // Generate recent activities from real data
-  const recentActivities = dashboardStats?.recentActivity || [
-    { 
-      id: 1, 
-      action: 'No recent activity', 
-      time: 'Just now', 
-      type: 'system',
-      icon: Activity
-    }
-  ];
-
-  const systemStatus = [
-    { 
-      label: 'API Status', 
-      status: 'Operational', 
-      icon: Target 
-    },
-    { 
-      label: 'Bot Status', 
-      status: activeBot ? 'Active' : 'No Bot Selected', 
-      icon: Brain 
-    },
-    { 
-      label: 'Database', 
-      status: 'Connected', 
-      icon: Award 
-    },
-  ];
-
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
