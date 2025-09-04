@@ -5,10 +5,23 @@ import { getChatResponse } from '../services/gemini.js';
 import SessionSchema from '../models/Session.schema.js';
 import { queryVectorData } from '../services/vectorServices.js';
 import { updateBotStats } from './stats.controller.js';
+import { useCredit, checkSubscriptionLimits } from '../services/subscriptionService.js';
 
 export const AiChatController = async (req, res) => {
     try {
         const { message, botId, sessionId } = req.body;
+        const userId = req.user?.userId;
+
+        // Check subscription limits before processing
+        if (userId) {
+            const limitCheck = await checkSubscriptionLimits(userId, 'send_message');
+            if (!limitCheck.allowed) {
+                return res.status(402).json({ 
+                    message: limitCheck.reason,
+                    limit: limitCheck.limit || limitCheck.remaining
+                });
+            }
+        }
 
         // Find bot configuration
         const bot = await BotConfig.findById(botId);
@@ -53,12 +66,22 @@ export const AiChatController = async (req, res) => {
         session.messageCount = session.messages.length;
         await session.save();
 
-        if (platform.remainingCredits < 1) {
-            return res.status(402).json({ message: 'Insufficient credits' });
+        // Use credit from subscription system
+        if (userId) {
+            try {
+                await useCredit(userId, 1);
+            } catch (creditError) {
+                console.error('Error using credit:', creditError);
+                // Continue with chat but log the error
+            }
+        } else {
+            // Fallback to platform credits for non-authenticated users
+            if (platform.remainingCredits < 1) {
+                return res.status(402).json({ message: 'Insufficient credits' });
+            }
+            platform.remainingCredits -= 1;
+            await platform.save();
         }
-        // Deduct platform credits
-        platform.remainingCredits -= 1;
-        await platform.save();
 
         // Update bot statistics
         try {

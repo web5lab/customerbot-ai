@@ -474,3 +474,55 @@ export const getChartData = createAsyncThunk(
         }
     }
 );
+
+// Subscription Actions
+export const getUserSubscription = createAsyncThunk(
+    "global/getUserSubscription",
+    async () => {
+        try {
+            const token = localStorage.getItem('authToken');
+            const response = await axiosInstance.get(`/subscription/subscription`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            return response.data;
+        } catch (err) {
+            throw err;
+        }
+    }
+);
+
+export const getUsageStats = createAsyncThunk(
+    "global/getUsageStats",
+    async () => {
+        try {
+            const token = localStorage.getItem('authToken');
+            const response = await axiosInstance.get(`/subscription/usage`, {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            return response.data;
+        } catch (err) {
+            throw err;
+        }
+    }
+);
+
+export const updateSubscriptionPlan = async ({ planType, billingCycle }) => {
+    try {
+        const token = localStorage.getItem('authToken');
+        const response = await axiosInstance.put(`/subscription/subscription`, 
+            { planType, billingCycle },
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            }
+        );
+        return response.data;
+    } catch (err) {
+        throw err;
+    }
+};

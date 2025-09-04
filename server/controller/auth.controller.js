@@ -2,6 +2,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.schema.js';
 import Platform from '../models/Platform.schema.js';
+import { createOrUpdateSubscription } from '../services/subscriptionService.js';
 import mongoose from 'mongoose';
 import { recoverTypedSignature, SignTypedDataVersion } from '@metamask/eth-sig-util'
 
@@ -52,6 +53,9 @@ export const gmailLogin = async (req, res) => {
                 icon: '' // Set default or allow frontend to upload
             });
             await platform.save();
+
+            // Create default free subscription
+            await createOrUpdateSubscription(user._id, 'free');
         } else {
             // If user exists, verify password
             const isMatch = bcrypt.compare(password, user.password);
@@ -125,6 +129,9 @@ export const metamaskLogin = async (req, res) => {
                 icon: '',
             });
             await platform.save();
+
+            // Create default free subscription
+            await createOrUpdateSubscription(user._id, 'free');
         } else {
             // ⏳ Fetch existing platforms
             platform = await Platform.find({ userId: new mongoose.Types.ObjectId(user._id) });

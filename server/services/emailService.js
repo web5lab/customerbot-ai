@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // Configure email transporter
-const transporter = nodemailer.createTransport({
+const transporter = nodemailer.createTransporter({
     service: 'gmail',
     auth: {
       user: process.env.EMAIL_USER,
@@ -476,6 +476,261 @@ export const sendRoleUpdateNotification = async ({
     } catch (error) {
         console.error('Error sending role update notification:', error);
         throw new Error(`Failed to send role update notification: ${error.message}`);
+    }
+};
+
+// Subscription renewal notification
+export const sendSubscriptionRenewalNotification = async ({ 
+    recipientEmail, 
+    recipientName, 
+    planType, 
+    renewalDate, 
+    creditsReset 
+}) => {
+    try {
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || 'noreply@customerbot.ai',
+            to: recipientEmail,
+            subject: `Your ${planType} subscription has been renewed`,
+            html: `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Subscription Renewed - CustomerBot</title>
+                </head>
+                <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc;">
+                    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                        
+                        <!-- Header -->
+                        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 30px; text-align: center;">
+                            <h1 style="color: #ffffff; margin: 0 0 10px 0; font-size: 28px; font-weight: 700;">Subscription Renewed! 🎉</h1>
+                            <p style="color: #d1fae5; margin: 0; font-size: 16px;">Your ${planType} plan is active</p>
+                        </div>
+                        
+                        <!-- Main Content -->
+                        <div style="padding: 40px 30px;">
+                            <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 24px; font-weight: 600;">
+                                Hello ${recipientName}!
+                            </h2>
+                            
+                            <p style="color: #374151; line-height: 1.6; margin: 0 0 25px 0; font-size: 16px;">
+                                Your <strong style="color: #1f2937;">${planType}</strong> subscription has been successfully renewed. 
+                                Your credits have been reset and you can continue using CustomerBot without interruption.
+                            </p>
+                            
+                            <!-- Renewal Details -->
+                            <div style="background-color: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 25px; margin: 0 0 30px 0;">
+                                <h3 style="color: #1f2937; margin: 0 0 15px 0; font-size: 18px; font-weight: 600;">Renewal Details:</h3>
+                                <ul style="color: #374151; margin: 0; padding: 0; list-style: none;">
+                                    <li style="margin: 0 0 8px 0; padding-left: 20px; position: relative;">
+                                        <span style="position: absolute; left: 0; top: 8px; width: 6px; height: 6px; background-color: #10b981; border-radius: 50%;"></span>
+                                        Plan: ${planType.charAt(0).toUpperCase() + planType.slice(1)}
+                                    </li>
+                                    <li style="margin: 0 0 8px 0; padding-left: 20px; position: relative;">
+                                        <span style="position: absolute; left: 0; top: 8px; width: 6px; height: 6px; background-color: #10b981; border-radius: 50%;"></span>
+                                        Credits Reset: ${creditsReset.toLocaleString()}
+                                    </li>
+                                    <li style="margin: 0 0 8px 0; padding-left: 20px; position: relative;">
+                                        <span style="position: absolute; left: 0; top: 8px; width: 6px; height: 6px; background-color: #10b981; border-radius: 50%;"></span>
+                                        Next Renewal: ${new Date(renewalDate).toLocaleDateString()}
+                                    </li>
+                                </ul>
+                            </div>
+                            
+                            <!-- CTA Button -->
+                            <div style="text-align: center; margin: 0 0 30px 0;">
+                                <a href="${process.env.VITE_WEB_URL}/dashboard" 
+                                   style="display: inline-block; background: linear-gradient(135deg, #1f2937 0%, #374151 100%); color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                                    Go to Dashboard
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <!-- Footer -->
+                        <div style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 25px 30px; text-align: center;">
+                            <p style="color: #9ca3af; margin: 0; font-size: 12px;">
+                                © ${new Date().getFullYear()} CustomerBot. All rights reserved.
+                            </p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log(`Subscription renewal notification sent to ${recipientEmail}:`, info.messageId);
+        return { success: true, messageId: info.messageId };
+    } catch (error) {
+        console.error('Error sending subscription renewal notification:', error);
+        throw new Error(`Failed to send renewal notification: ${error.message}`);
+    }
+};
+
+// Subscription expiry warning
+export const sendSubscriptionExpiryWarning = async ({ 
+    recipientEmail, 
+    recipientName, 
+    planType, 
+    expiryDate, 
+    daysRemaining 
+}) => {
+    try {
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || 'noreply@customerbot.ai',
+            to: recipientEmail,
+            subject: `Your ${planType} subscription expires in ${daysRemaining} days`,
+            html: `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Subscription Expiry Warning - CustomerBot</title>
+                </head>
+                <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc;">
+                    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                        
+                        <!-- Header -->
+                        <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); padding: 40px 30px; text-align: center;">
+                            <h1 style="color: #ffffff; margin: 0 0 10px 0; font-size: 28px; font-weight: 700;">Subscription Expiring Soon ⚠️</h1>
+                            <p style="color: #fef3c7; margin: 0; font-size: 16px;">${daysRemaining} days remaining</p>
+                        </div>
+                        
+                        <!-- Main Content -->
+                        <div style="padding: 40px 30px;">
+                            <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 24px; font-weight: 600;">
+                                Hello ${recipientName}!
+                            </h2>
+                            
+                            <p style="color: #374151; line-height: 1.6; margin: 0 0 25px 0; font-size: 16px;">
+                                Your <strong style="color: #1f2937;">${planType}</strong> subscription will expire on 
+                                <strong style="color: #1f2937;">${new Date(expiryDate).toLocaleDateString()}</strong> 
+                                (${daysRemaining} days from now).
+                            </p>
+                            
+                            <!-- Warning Box -->
+                            <div style="background-color: #fef3c7; border: 1px solid #fbbf24; border-radius: 8px; padding: 25px; margin: 0 0 30px 0;">
+                                <h3 style="color: #92400e; margin: 0 0 10px 0; font-size: 16px; font-weight: 600;">What happens after expiry?</h3>
+                                <ul style="color: #92400e; margin: 0; padding-left: 20px;">
+                                    <li>Your account will be downgraded to the free plan</li>
+                                    <li>Bot functionality will be limited</li>
+                                    <li>Advanced features will be disabled</li>
+                                    <li>Credit allowance will be reduced</li>
+                                </ul>
+                            </div>
+                            
+                            <!-- CTA Button -->
+                            <div style="text-align: center; margin: 0 0 30px 0;">
+                                <a href="${process.env.VITE_WEB_URL}/billing" 
+                                   style="display: inline-block; background: linear-gradient(135deg, #1f2937 0%, #374151 100%); color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                                    Renew Subscription
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <!-- Footer -->
+                        <div style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 25px 30px; text-align: center;">
+                            <p style="color: #9ca3af; margin: 0; font-size: 12px;">
+                                © ${new Date().getFullYear()} CustomerBot. All rights reserved.
+                            </p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log(`Subscription expiry warning sent to ${recipientEmail}:`, info.messageId);
+        return { success: true, messageId: info.messageId };
+    } catch (error) {
+        console.error('Error sending subscription expiry warning:', error);
+        throw new Error(`Failed to send expiry warning: ${error.message}`);
+    }
+};
+
+// Subscription expired notification
+export const sendSubscriptionExpiredNotification = async ({ 
+    recipientEmail, 
+    recipientName, 
+    planType, 
+    expiryDate 
+}) => {
+    try {
+        const mailOptions = {
+            from: process.env.EMAIL_FROM || 'noreply@customerbot.ai',
+            to: recipientEmail,
+            subject: `Your ${planType} subscription has expired`,
+            html: `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="utf-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>Subscription Expired - CustomerBot</title>
+                </head>
+                <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8fafc;">
+                    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                        
+                        <!-- Header -->
+                        <div style="background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); padding: 40px 30px; text-align: center;">
+                            <h1 style="color: #ffffff; margin: 0 0 10px 0; font-size: 28px; font-weight: 700;">Subscription Expired</h1>
+                            <p style="color: #fecaca; margin: 0; font-size: 16px;">Account downgraded to free plan</p>
+                        </div>
+                        
+                        <!-- Main Content -->
+                        <div style="padding: 40px 30px;">
+                            <h2 style="color: #1f2937; margin: 0 0 20px 0; font-size: 24px; font-weight: 600;">
+                                Hello ${recipientName},
+                            </h2>
+                            
+                            <p style="color: #374151; line-height: 1.6; margin: 0 0 25px 0; font-size: 16px;">
+                                Your <strong style="color: #1f2937;">${planType}</strong> subscription expired on 
+                                <strong style="color: #1f2937;">${new Date(expiryDate).toLocaleDateString()}</strong>. 
+                                Your account has been automatically downgraded to the free plan.
+                            </p>
+                            
+                            <!-- Impact Notice -->
+                            <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 25px; margin: 0 0 30px 0;">
+                                <h3 style="color: #991b1b; margin: 0 0 15px 0; font-size: 18px; font-weight: 600;">What's Changed:</h3>
+                                <ul style="color: #7f1d1d; margin: 0; padding-left: 20px;">
+                                    <li>Limited to 100 conversations per month</li>
+                                    <li>Maximum 1 AI assistant</li>
+                                    <li>Basic analytics only</li>
+                                    <li>Email support only</li>
+                                </ul>
+                            </div>
+                            
+                            <!-- CTA Button -->
+                            <div style="text-align: center; margin: 0 0 30px 0;">
+                                <a href="${process.env.VITE_WEB_URL}/billing" 
+                                   style="display: inline-block; background: linear-gradient(135deg, #1f2937 0%, #374151 100%); color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                                    Reactivate Subscription
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <!-- Footer -->
+                        <div style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 25px 30px; text-align: center;">
+                            <p style="color: #9ca3af; margin: 0; font-size: 12px;">
+                                © ${new Date().getFullYear()} CustomerBot. All rights reserved.
+                            </p>
+                        </div>
+                    </div>
+                </body>
+                </html>
+            `
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log(`Subscription expired notification sent to ${recipientEmail}:`, info.messageId);
+        return { success: true, messageId: info.messageId };
+    } catch (error) {
+        console.error('Error sending subscription expired notification:', error);
+        throw new Error(`Failed to send expired notification: ${error.message}`);
     }
 };
 

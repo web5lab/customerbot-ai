@@ -312,6 +312,26 @@ export const globalSlice = createSlice({
       .addCase(getChartData.fulfilled, (state, action) => {
         state.chartData = action.payload.chartData || null;
       });
+    builder
+      .addCase(getUserSubscription.pending, (state) => {
+        state.subscription = null;
+      })
+      .addCase(getUserSubscription.rejected, (state, action) => {
+        state.subscription = null;
+      })
+      .addCase(getUserSubscription.fulfilled, (state, action) => {
+        state.subscription = action.payload.subscription || null;
+      });
+    builder
+      .addCase(getUsageStats.pending, (state) => {
+        state.usageStats = null;
+      })
+      .addCase(getUsageStats.rejected, (state, action) => {
+        state.usageStats = null;
+      })
+      .addCase(getUsageStats.fulfilled, (state, action) => {
+        state.usageStats = action.payload.usage || null;
+      });
   }
 })
 

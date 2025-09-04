@@ -262,11 +262,52 @@ export function Billing() {
 
           <div className="p-6">
             <div className="space-y-4">
-              {[
-                { date: 'Nov 15, 2024', amount: '$29.00', status: 'Paid', invoice: 'INV-001' },
-                { date: 'Oct 15, 2024', amount: '$29.00', status: 'Paid', invoice: 'INV-002' },
-                { date: 'Sep 15, 2024', amount: '$29.00', status: 'Paid', invoice: 'INV-003' },
-              ].map((item, index) => (
+              {subscription?.paymentHistory?.length > 0 ? (
+                subscription.paymentHistory.slice(0, 3).map((item, index) => (
+                  <div key={index} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
+                    <div>
+                      <div className="font-medium text-gray-900">{item.description || `Payment ${index + 1}`}</div>
+                      <div className="text-sm text-gray-600">{new Date(item.paidAt).toLocaleDateString()}</div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-medium text-gray-900">${item.amount}</div>
+                      <div className={`text-sm ${
+                        item.status === 'succeeded' ? 'text-green-600' : 
+                        item.status === 'failed' ? 'text-red-600' : 
+                        'text-yellow-600'
+                      }`}>
+                        {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No billing history available</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Subscription Status */}
+        {subscription && (
+          <div className="bg-white border border-gray-200 rounded-lg p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Subscription Status</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="text-center p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="text-2xl font-bold text-gray-900 mb-1">
+                  {subscription.daysUntilRenewal || 0}
+                </div>
+                <div className="text-sm text-gray-600">Days Until Renewal</div>
+              </div>
+              <div className="text-center p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="text-2xl font-bold text-gray-900 mb-1">
+                  {subscription.isActive() ? 'Active' : 'Inactive'}
+                </div>
+                <div className="text-sm text-gray-600">Status</div>
+              </div>
+              <div className="text-center p-4 bg-gray-50 rounded-lg border border-gray-200">
                 <div key={index} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-b-0">
                   <div>
                     <div className="font-medium text-gray-900">{item.invoice}</div>
@@ -277,10 +318,14 @@ export function Billing() {
                     <div className="text-sm text-green-600">{item.status}</div>
                   </div>
                 </div>
-              ))}
+                <div className="text-2xl font-bold text-gray-900 mb-1">
+                  {subscription.billingCycle.charAt(0).toUpperCase() + subscription.billingCycle.slice(1)}
+                </div>
+                <div className="text-sm text-gray-600">Billing Cycle</div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

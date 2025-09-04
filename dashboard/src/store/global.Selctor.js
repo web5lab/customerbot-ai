@@ -91,3 +91,13 @@ export const chartDataSelector = createSelector(
   [globalSelector],
   (global) => global.chartData
 );
+
+export const subscriptionSelector = createSelector(
+  [globalSelector],
+  (global) => global.subscription
+);
+
+export const usageStatsSelector = createSelector(
+  [globalSelector],
+  (global) => global.usageStats
+);

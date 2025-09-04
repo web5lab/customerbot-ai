@@ -9,6 +9,7 @@ import puppeteer from 'puppeteer';
 import { insertBotData } from '../services/vectorServices.js';
 import Team from '../models/Team.schema.js';
 import User from '../models/User.schema.js';
+import { checkSubscriptionLimits } from '../services/subscriptionService.js';
 import { createInitialStats } from './stats.controller.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,6 +18,15 @@ export const createChatBot = async (req, res) => {
     const id = req.user.userId;
     const { name, websiteUrl } = req.body;
     try {
+        // Check subscription limits before creating bot
+        const limitCheck = await checkSubscriptionLimits(id, 'create_bot');
+        if (!limitCheck.allowed) {
+            return res.status(402).json({ 
+                message: limitCheck.reason,
+                limit: limitCheck.limit
+            });
+        }
+
         // Validate Platform ID
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ message: 'Invalid Platform ID' });

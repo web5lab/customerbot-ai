@@ -10,14 +10,19 @@ export function Dashboard() {
   const activeBot = useSelector(activeBotSelector);
   const botStats = useSelector(botStatsSelector);
   const dashboardStats = useSelector(dashboardStatsSelector);
+  const subscription = useSelector(subscriptionSelector);
+  const usageStats = useSelector(usageStatsSelector);
 
   useEffect(() => {
     dispatch(GetBots());
     dispatch(getDashboardStats());
+    dispatch(getUserSubscription());
+    dispatch(getUsageStats());
     
     // Set up interval to refresh stats every 30 seconds
     const interval = setInterval(() => {
       dispatch(getDashboardStats());
+      dispatch(getUsageStats());
       if (activeBot) {
         dispatch(getBotStats({ botId: activeBot._id }));
       }
@@ -33,7 +38,36 @@ export function Dashboard() {
   }, [activeBot, dispatch]);
 
   // Generate stats from real data
-  const stats = [
+  const stats = usageStats ? [
+    {
+      label: 'Credits Used',
+      value: `${usageStats.credits.used}/${usageStats.credits.total === -1 ? '∞' : usageStats.credits.total}`,
+      icon: Zap,
+      change: `${usageStats.credits.remaining} remaining`,
+      changeType: 'neutral'
+    },
+    {
+      label: 'Active Bots',
+      value: `${usageStats.bots.used}/${usageStats.bots.total === 'unlimited' ? '∞' : usageStats.bots.total}`,
+      icon: Brain,
+      change: subscription?.planType || 'free',
+      changeType: 'positive'
+    },
+    {
+      label: 'Total Conversations',
+      value: `${usageStats.conversations.used}/${usageStats.conversations.total === 'unlimited' ? '∞' : usageStats.conversations.total}`,
+      icon: MessageSquare,
+      change: 'This month',
+      changeType: 'positive'
+    },
+    {
+      label: 'Subscription Status',
+      value: subscription?.status?.charAt(0).toUpperCase() + subscription?.status?.slice(1) || 'Loading',
+      icon: Shield,
+      change: `${subscription?.daysUntilRenewal || 0} days left`,
+      changeType: 'positive'
+    }
+  ] : [
     {
       label: 'Total Conversations',
       value: botStats?.totalConversations?.toLocaleString() || dashboardStats?.stats?.totalConversations?.toLocaleString() || '0',
@@ -47,21 +81,7 @@ export function Dashboard() {
       icon: Users,
       change: dashboardStats?.growth?.users || '+0%',
       changeType: 'positive'
-    },
-    {
-      label: 'Response Time',
-      value: botStats?.averageResponseTime ? `${(botStats.averageResponseTime / 1000).toFixed(1)}s` : '1.2s',
-      icon: Clock,
-      change: dashboardStats?.growth?.responseTime || '-15%',
-      changeType: 'positive'
-    },
-    {
-      label: 'Resolution Rate',
-      value: botStats?.resolutionRate ? `${botStats.resolutionRate.toFixed(1)}%` : '94%',
-      icon: Target,
-      change: dashboardStats?.growth?.resolution || '+5%',
-      changeType: 'positive'
-    },
+    }
   ];
 
   // Generate recent activities from real data
