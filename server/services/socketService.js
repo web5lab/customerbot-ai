@@ -524,7 +524,7 @@ export const initializeSocket = (server) => {
                 
                 // Add transfer message
                 session.messages.push({
-                    role: 'system',
+                    role: 'agent',
                     content: `Session transferred from ${socket.user.name} to ${targetAgent.name}${reason ? `: ${reason}` : ''}`,
                     timestamp: new Date()
                 });
@@ -621,7 +621,7 @@ export const initializeSocket = (server) => {
                 
                 // Add transfer message
                 session.messages.push({
-                    role: 'system',
+                    role: 'agent',
                     content: `Session transferred from ${socket.user.name} to ${targetAgent.name}${reason ? `: ${reason}` : ''}`,
                     timestamp: new Date()
                 });
