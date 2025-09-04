@@ -121,7 +121,7 @@ export const getDashboardStats = async (req, res) => {
                 time: getTimeAgo(session.timestamp),
                 type: 'conversation',
                 botName: session.botId?.name || 'Unknown Bot',
-                icon: MessageSquare
+                icon: 'MessageSquare'
             }))
         });
     } catch (error) {
