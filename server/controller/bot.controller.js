@@ -7,6 +7,8 @@ import { fileURLToPath } from 'url';
 import BotData from '../models/BotData.schema.js';
 import puppeteer from 'puppeteer';
 import { insertBotData } from '../services/vectorServices.js';
+import Team from '../models/Team.schema.js';
+import User from '../models/User.schema.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -71,6 +73,12 @@ export const createChatBot = async (req, res) => {
 
         console.log('Website Text:', pageText);
 
+        // Get user data for team creation
+        const user = await User.findById(id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
         // Optional icon handling
         let iconPath = 'https://customerbot.in/avatars/bot1.png'; // fallback icon
 
@@ -89,6 +97,23 @@ export const createChatBot = async (req, res) => {
 
 
         await newBot.save();
+
+        // Create team for the new bot
+        const newTeam = new Team({
+            botId: newBot._id,
+            ownerId: new mongoose.Types.ObjectId(id),
+            members: [{
+                userId: new mongoose.Types.ObjectId(id),
+                email: user.email || 'owner@example.com',
+                name: user.name || 'Bot Owner',
+                role: 'admin',
+                status: 'active',
+                invitedBy: new mongoose.Types.ObjectId(id),
+                joinedAt: new Date()
+            }]
+        });
+        await newTeam.save();
+
         if (pageText) {
             await insertBotData({ botId: newBot._id, Data: pageText });
         }
@@ -106,17 +131,60 @@ export const getChatBot = async (req, res) => {
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({ message: 'Invalid Platform ID' });
         }
+
+        // Get user's own platform and bots
         const platform = await Platform.findOne({ userId: new mongoose.Types.ObjectId(id) });
-        if (!platform) {
-            return res.status(404).json({ message: 'Platform not found' });
-        }
-        console.log('platform', platform);
-        // Fetch all bots by platFormId
+        let ownedBots = [];
         if (platform) {
-            const bots = await BotConfig.find({ platFormId: platform._id });
-            return res.status(200).json({ bots });
+            ownedBots = await BotConfig.find({ platFormId: platform._id });
         }
-        res.status(400).json({ message: 'Provide either botId or platFormId' });
+
+        // Get bots where user is a team member
+        const teamMemberships = await Team.find({
+            'members.userId': new mongoose.Types.ObjectId(id),
+            'members.status': 'active'
+        }).populate('botId');
+
+        const teamBots = teamMemberships
+            .map(team => team.botId)
+            .filter(bot => bot !== null); // Filter out any null values
+
+        // Combine owned bots and team bots, removing duplicates
+        const allBotIds = new Set();
+        const allBots = [];
+
+        // Add owned bots
+        ownedBots.forEach(bot => {
+            if (!allBotIds.has(bot._id.toString())) {
+                allBotIds.add(bot._id.toString());
+                allBots.push({
+                    ...bot.toObject(),
+                    userRole: 'owner',
+                    isOwner: true
+                });
+            }
+        });
+
+        // Add team bots
+        teamBots.forEach(bot => {
+            if (!allBotIds.has(bot._id.toString())) {
+                allBotIds.add(bot._id.toString());
+                
+                // Find user's role in this team
+                const team = teamMemberships.find(t => t.botId._id.toString() === bot._id.toString());
+                const userMember = team.members.find(m => m.userId.toString() === id);
+                
+                allBots.push({
+                    ...bot.toObject(),
+                    userRole: userMember ? userMember.role : 'viewer',
+                    isOwner: false,
+                    teamId: team._id
+                });
+            }
+        });
+
+        console.log('All accessible bots:', allBots.length);
+        res.status(200).json({ bots: allBots });
     } catch (error) {
         console.error('Error fetching chatbot:', error);
         res.status(500).json({ message: 'Server error while fetching chatbot' });
