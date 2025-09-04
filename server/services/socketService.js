@@ -554,6 +554,83 @@ export const initializeSocket = (server) => {
                 });
             }
         });
+
+        // Handle agent status updates
+        socket.on('update-agent-status', (data) => {
+            const { status } = data;
+            socket.agentStatus = status;
+            
+            if (socket.botId) {
+                socket.to(`bot-${socket.botId}-agents`).emit('agent-status-update', {
+                    agentId: socket.userId,
+                    agentName: socket.user?.name,
+                    status,
+                    timestamp: new Date()
+                });
+            }
+        });
+
+        // Handle session transfer
+        socket.on('transfer-session', async (data) => {
+            const { sessionId, targetAgentId, reason } = data;
+            
+            if (!socket.isAgent || !socket.isAuthenticated) {
+                socket.emit('error', { message: 'Agent authentication required' });
+                return;
+            }
+
+            try {
+                const session = await Session.findById(sessionId);
+                if (!session || session.assignedAgent?.toString() !== socket.userId) {
+                    socket.emit('error', { message: 'Session not found or not assigned to you' });
+                    return;
+                }
+
+                const targetAgent = await User.findById(targetAgentId);
+                if (!targetAgent) {
+                    socket.emit('error', { message: 'Target agent not found' });
+                    return;
+                }
+
+                // Update session
+                session.assignedAgent = targetAgentId;
+                session.lastActivity = new Date();
+                
+                // Add transfer message
+                session.messages.push({
+                    role: 'system',
+                    content: `Session transferred from ${socket.user.name} to ${targetAgent.name}${reason ? `: ${reason}` : ''}`,
+                    timestamp: new Date()
+                });
+
+                session.messageCount = session.messages.length;
+                await session.save();
+
+                // Notify all participants
+                io.to(`session-${sessionId}`).emit('session-transferred', {
+                    sessionId,
+                    fromAgent: socket.user.name,
+                    toAgent: targetAgent.name,
+                    reason,
+                    timestamp: new Date()
+                });
+
+                // Notify agents
+                socket.to(`bot-${session.botId}-agents`).emit('session-transfer-update', {
+                    sessionId,
+                    fromAgentId: socket.userId,
+                    toAgentId: targetAgentId,
+                    fromAgent: socket.user.name,
+                    toAgent: targetAgent.name
+                });
+
+                console.log(`Session ${sessionId} transferred from ${socket.user.name} to ${targetAgent.name}`);
+
+            } catch (error) {
+                console.error('Error transferring session:', error);
+                socket.emit('error', { message: 'Failed to transfer session' });
+            }
+        });
     });
 
     return io;

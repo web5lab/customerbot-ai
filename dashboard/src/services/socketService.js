@@ -168,6 +168,31 @@ class SocketService {
             this.listeners.clear();
         }
     }
+
+    // Update agent status
+    updateAgentStatus(status) {
+        if (!this.socket) return;
+        
+        this.socket.emit('update-agent-status', { status });
+    }
+
+    // Transfer session to another agent
+    transferSession(sessionId, targetAgentId, reason = null) {
+        if (!this.socket) return;
+        
+        this.socket.emit('transfer-session', { 
+            sessionId, 
+            targetAgentId, 
+            reason 
+        });
+    }
+
+    // Get agent's active sessions
+    getAgentSessions(botId) {
+        if (!this.socket) return;
+        
+        this.socket.emit('get-agent-sessions', { botId });
+    }
 }
 
 // Create singleton instance

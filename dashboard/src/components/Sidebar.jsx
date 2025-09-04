@@ -18,6 +18,7 @@ import {
   Sparkles,
   Crown,
   Zap
+  UserCheck
 } from 'lucide-react';
 import logo from "../assets/logo.png"
 import { logedInSelector, userSelector, botsSelector, activeBotSelector } from '../store/global.Selctor';
@@ -35,6 +36,7 @@ const botNavigation = [
   { name: 'Customize', href: '/preview', icon: Settings },
   { name: 'Training', href: '/training', icon: Brain },
   { name: 'Sessions', href: '/sessions', icon: MessageSquare },
+  { name: 'Agent Dashboard', href: '/agent-dashboard', icon: UserCheck },
   { name: 'Leads', href: '/leads', icon: Users },
   { name: 'Teams', href: '/teams', icon: Users },
   { name: 'Integrations', href: '/integrations', icon: Plug },

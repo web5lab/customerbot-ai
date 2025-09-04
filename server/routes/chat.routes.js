@@ -7,7 +7,9 @@ import {
     updateSessionStatus,
     requestHumanSupport,
     getActiveSupportSessions,
-    assignAgentToSession
+    assignAgentToSession,
+    sendAgentMessage,
+    getAgentActiveSessions
 } from '../controller/chat.controller.js';
 import { authenticateToken } from '../middleware/auth.js';
 
@@ -20,5 +22,7 @@ router.put("/session/:sessionId/status",authenticateToken,updateSessionStatus)
 router.post("/session/:sessionId/request-support", requestHumanSupport)
 router.get("/bot/:botId/support-sessions", authenticateToken, getActiveSupportSessions)
 router.post("/session/:sessionId/assign-agent", authenticateToken, assignAgentToSession)
+router.post("/session/:sessionId/agent-message", authenticateToken, sendAgentMessage)
+router.get("/bot/:botId/agent-sessions", authenticateToken, getAgentActiveSessions)
 
 export default router;

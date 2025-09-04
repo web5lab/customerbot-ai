@@ -461,3 +461,98 @@ export const assignAgentToSession = async (req, res) => {
         });
     }
 };
+// Send message as agent
+export const sendAgentMessage = async (req, res) => {
+    try {
+        const { sessionId } = req.params;
+        const { message } = req.body;
+        const userId = req.user.userId;
+
+        if (!mongoose.Types.ObjectId.isValid(sessionId)) {
+            return res.status(400).json({ message: 'Invalid session ID' });
+        }
+
+        const session = await SessionSchema.findById(sessionId);
+        if (!session) {
+            return res.status(404).json({ message: 'Session not found' });
+        }
+
+        // Verify agent is assigned to this session
+        if (session.assignedAgent?.toString() !== userId) {
+            return res.status(403).json({ message: 'You are not assigned to this session' });
+        }
+
+        const user = await mongoose.model('User').findById(userId);
+        
+        // Add message to session
+        const newMessage = {
+            role: 'agent',
+            content: message,
+            timestamp: new Date(),
+            senderId: userId,
+            senderName: user.name
+        };
+
+        session.messages.push(newMessage);
+        session.lastMessage = message;
+        session.messageCount = session.messages.length;
+        session.lastActivity = new Date();
+        await session.save();
+
+        // Notify via Socket.IO
+        notifySession(sessionId, 'new-message', {
+            sessionId,
+            message: newMessage,
+            timestamp: new Date()
+        });
+
+        res.status(200).json({
+            message: 'Message sent successfully',
+            session
+        });
+    } catch (error) {
+        console.error('Error sending agent message:', error);
+        res.status(500).json({
+            error: 'Error sending message',
+            details: error.message
+        });
+    }
+};
+
+// Get agent's active sessions
+export const getAgentActiveSessions = async (req, res) => {
+    try {
+        const userId = req.user.userId;
+        const { botId } = req.params;
+
+        if (!mongoose.Types.ObjectId.isValid(botId)) {
+            return res.status(400).json({ message: 'Invalid Bot ID' });
+        }
+
+        // Verify user has access to this bot
+        const team = await mongoose.model('Team').findOne({
+            botId,
+            'members.userId': userId,
+            'members.status': 'active'
+        });
+
+        if (!team) {
+            return res.status(403).json({ message: 'Access denied' });
+        }
+
+        // Get sessions assigned to this agent
+        const sessions = await SessionSchema.find({
+            botId,
+            assignedAgent: userId,
+            status: { $in: ['active', 'pending'] }
+        }).sort({ lastActivity: -1 });
+
+        res.status(200).json({ sessions });
+    } catch (error) {
+        console.error('Error fetching agent sessions:', error);
+        res.status(500).json({
+            error: 'Error fetching agent sessions',
+            details: error.message
+        });
+    }
+};

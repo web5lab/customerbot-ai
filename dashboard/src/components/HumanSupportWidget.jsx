@@ -31,6 +31,11 @@ export function HumanSupportWidget({
   });
 
   useEffect(() => {
+    // Show support button after some interaction
+    const timer = setTimeout(() => {
+      setShowSupportButton(true);
+    }, 30000); // Show after 30 seconds
+
     // Listen for support confirmation
     socketService.on('support-requested', (data) => {
       setSupportRequested(true);
@@ -50,6 +55,7 @@ export function HumanSupportWidget({
     });
 
     return () => {
+      clearTimeout(timer);
       socketService.off('support-requested');
       socketService.off('agent-joined');
     };

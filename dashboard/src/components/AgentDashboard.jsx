@@ -37,6 +37,12 @@ export function AgentDashboard({ botId, onSessionSelect }) {
           if (exists) return prev;
           return [...prev, data];
         });
+        
+        // Update stats
+        setAgentStats(prev => ({
+          ...prev,
+          activeChats: prev.activeChats + 1
+        }));
       });
 
       // Listen for active sessions
@@ -47,6 +53,14 @@ export function AgentDashboard({ botId, onSessionSelect }) {
       // Listen for session taken by other agents
       socketService.on('session-taken', (data) => {
         setSupportQueue(prev => prev.filter(s => s.sessionId !== data.sessionId));
+        
+        // Update stats if this agent took the session
+        if (data.agentId === localStorage.getItem('agentId')) {
+          setAgentStats(prev => ({
+            ...prev,
+            activeChats: prev.activeChats + 1
+          }));
+        }
       });
 
       // Listen for customer messages
@@ -59,12 +73,76 @@ export function AgentDashboard({ botId, onSessionSelect }) {
         ));
       });
 
+      // Listen for session resolved
+      socketService.on('session-resolved', (data) => {
+        setActiveSessions(prev => prev.filter(s => s._id !== data.sessionId));
+        setSupportQueue(prev => prev.filter(s => s.sessionId !== data.sessionId));
+        setConnectedSessions(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(data.sessionId);
+          return newSet;
+        });
+        
+        setAgentStats(prev => ({
+          ...prev,
+          resolvedToday: prev.resolvedToday + 1,
+          activeChats: Math.max(0, prev.activeChats - 1)
+        }));
+      });
+
+      // Fetch initial data
+      fetchActiveSessions();
+      fetchSupportQueue();
       return () => {
         socketService.removeAllListeners();
       };
     }
   }, [botId]);
 
+  const fetchActiveSessions = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/chat/bot/${botId}/agent-sessions`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setActiveSessions(data.sessions || []);
+      }
+    } catch (error) {
+      console.error('Error fetching active sessions:', error);
+    }
+  };
+
+  const fetchSupportQueue = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/chat/bot/${botId}/support-sessions`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setSupportQueue(data.sessions?.map(session => ({
+          sessionId: session._id,
+          customerMessage: session.lastMessage,
+          customerInfo: {
+            name: session.customerName,
+            email: session.customerEmail
+          },
+          timestamp: session.humanSupportRequestedAt,
+          session: session
+        })) || []);
+      }
+    } catch (error) {
+      console.error('Error fetching support queue:', error);
+    }
+  };
   const handleTakeSession = async (sessionId) => {
     try {
       socketService.takeSession(sessionId);

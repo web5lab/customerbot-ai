@@ -35,6 +35,7 @@ import { ChatUI } from './components/ChatUi';
 import { ShareChatUI } from './components/ShareChatUi';
 import { Teams } from './pages/Teams';
 import { Leads } from './pages/Leads';
+import { AgentDashboardPage } from './pages/AgentDashboard';
 
 const botRoutes = [
   { path: '/stats', element: <Dashboard /> },
@@ -46,6 +47,7 @@ const botRoutes = [
   { path: '/bot-settings', element: <BotSettings /> },
   { path: '/teams', element: <Teams /> },
   { path: '/leads', element: <Leads /> },
+  { path: '/agent-dashboard', element: <AgentDashboardPage /> },
 ];
 
 function AuthHandler() {
