@@ -75,5 +75,14 @@ export const api = {
       }
     });
     return response.data;
+  },
+
+  deleteSession: async (sessionId) => {
+    const token = localStorage.getItem('authToken');
+    await axios.delete(`${API_URL}/chat/sessions/${sessionId}`, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
   }
 };
