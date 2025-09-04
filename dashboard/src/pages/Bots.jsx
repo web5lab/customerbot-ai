@@ -610,7 +610,11 @@ export function Bots() {
                     {/* Stats */}
                     <div className="bg-gray-50 rounded-lg p-4 mb-4 border border-gray-100">
                       <div className="text-center">
-                        <div className="text-xl font-bold text-gray-900">1.2k</div>
+                        <div className="text-xl font-bold text-gray-900">
+                          {dashboardStats?.stats?.totalConversations ? 
+                            Math.floor(dashboardStats.stats.totalConversations / dashboardStats.stats.totalBots || 1).toLocaleString() : 
+                            '0'}
+                        </div>
                         <div className="text-sm text-gray-500">Conversations</div>
                       </div>
                     </div>

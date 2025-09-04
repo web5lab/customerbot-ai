@@ -84,7 +84,7 @@ export const getDashboardStats = async (req, res) => {
         const recentSessions = await Session.find({
             botId: { $in: botIds },
             timestamp: { $gte: sevenDaysAgo }
-        }).sort({ timestamp: -1 }).limit(10);
+        }).sort({ timestamp: -1 }).limit(10).populate('botId', 'name');
 
         // Calculate growth metrics
         const thirtyDaysAgo = new Date();
@@ -117,10 +117,11 @@ export const getDashboardStats = async (req, res) => {
             },
             recentActivity: recentSessions.map(session => ({
                 id: session._id,
-                action: `New conversation: ${session.title}`,
+                action: `New conversation: ${session.title || 'Chat session'}`,
                 time: getTimeAgo(session.timestamp),
                 type: 'conversation',
-                botName: bots.find(bot => bot._id.toString() === session.botId.toString())?.name || 'Unknown Bot'
+                botName: session.botId?.name || 'Unknown Bot',
+                icon: MessageSquare
             }))
         });
     } catch (error) {

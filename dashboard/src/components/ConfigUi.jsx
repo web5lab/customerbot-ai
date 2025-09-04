@@ -204,26 +204,6 @@ export function ConfigUI() {
     <div className="space-y-6">
       <CollapsibleGroup id="colors" title="Colors & Theme" icon={Palette}>
         <div className="space-y-6">
-          {/* Theme Mode */}
-          <div>
-            <label className="text-sm font-medium text-gray-700 mb-3 block">Theme Mode</label>
-            <div className="grid grid-cols-2 gap-3">
-              {['light', 'dark'].map((theme) => (
-                <button
-                  key={theme}
-                  onClick={() => updateConfig('themeMode', theme)}
-                  className={`p-3 rounded-lg border-2 transition-all ${
-                    uiConfig.themeMode === theme
-                      ? 'border-blue-500 bg-blue-50'
-                      : 'border-gray-200 hover:border-gray-300'
-                  }`}
-                >
-                  <div className="text-sm font-medium capitalize">{theme}</div>
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Color Palettes */}
           <div>
             <label className="text-sm font-medium text-gray-700 mb-3 block">Color Palette</label>

@@ -92,30 +92,6 @@ const charts = [
 ];
 
 export function Dashboard() {
-  const [isDark, setIsDark] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return document.documentElement.classList.contains('dark');
-    }
-    return false;
-  });
-
-  useEffect(() => {
-    const observer = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        if (mutation.attributeName === 'class') {
-          setIsDark(document.documentElement.classList.contains('dark'));
-        }
-      });
-    });
-
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ['class']
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
   return (
     <section className="relative py-24 bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 overflow-hidden">
       {/* Background Effects */}
@@ -207,9 +183,9 @@ export function Dashboard() {
                       <YAxis stroke="#6b7280" />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: isDark ? '#1e293b' : 'white',
-                          border: isDark ? '1px solid #334155' : '1px solid #e5e7eb',
-                          color: isDark ? '#fff' : '#000',
+                          backgroundColor: 'white',
+                          border: '1px solid #e5e7eb',
+                          color: '#000',
                           borderRadius: '0.75rem',
                           boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'
                         }}
@@ -227,9 +203,9 @@ export function Dashboard() {
                       <YAxis stroke="#6b7280" />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: isDark ? '#1e293b' : 'white',
-                          border: isDark ? '1px solid #334155' : '1px solid #e5e7eb',
-                          color: isDark ? '#fff' : '#000',
+                          backgroundColor: 'white',
+                          border: '1px solid #e5e7eb',
+                          color: '#000',
                           borderRadius: '0.75rem',
                           boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'
                         }}
@@ -256,9 +232,9 @@ export function Dashboard() {
                       </Pie>
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: isDark ? '#1e293b' : 'white',
-                          border: isDark ? '1px solid #334155' : '1px solid #e5e7eb',
-                          color: isDark ? '#fff' : '#000',
+                          backgroundColor: 'white',
+                          border: '1px solid #e5e7eb',
+                          color: '#000',
                           borderRadius: '0.75rem',
                           boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'
                         }}
@@ -269,6 +245,32 @@ export function Dashboard() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Real-time Activity Feed */}
+        <div className="bg-white/80 backdrop-blur-sm rounded-3xl p-8 border border-white/50 shadow-lg">
+          <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+            <Activity className="w-6 h-6 text-blue-600" />
+            Recent Activity
+          </h3>
+          <div className="space-y-4">
+            {recentActivities.map((activity, index) => (
+              <div key={activity.id || index} className="flex items-center gap-4 p-4 bg-white rounded-xl border border-gray-200 hover:shadow-sm transition-all">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <activity.icon className="w-5 h-5 text-blue-600" />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium text-gray-900">{activity.action}</p>
+                  <p className="text-sm text-gray-500">{activity.time}</p>
+                </div>
+                {activity.botName && (
+                  <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full">
+                    {activity.botName}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </section>
