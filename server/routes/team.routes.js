@@ -9,7 +9,8 @@ import {
     updateTeamSettings,
     acceptInvitation,
     getTeamPermissions,
-    acceptInvitationWithToken
+    acceptInvitationWithToken,
+    respondToInvitation
 } from '../controller/team.controller.js';
 
 const router = express.Router();
@@ -43,4 +44,5 @@ router.get('/bot/:botId/permissions', authenticateToken, getTeamPermissions);
 
 // Accept or decline invitation
 router.post('/invitation/:invitationId/respond', authenticateToken, respondToInvitation);
+
 export default router;
