@@ -164,7 +164,7 @@ export function AgentDashboard({ botId, onSessionSelect }) {
   const fetchAllSessions = async () => {
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/chat/get-chat-sessions/${botId}`, {
+      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/chat/bot/${botId}/all-sessions`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -172,39 +172,17 @@ export function AgentDashboard({ botId, onSessionSelect }) {
       
       if (response.ok) {
         const data = await response.json();
-        // Filter for active sessions only
-        const activeSessions = data.filter(session => 
-          session.status === 'active' && 
-          session.messageCount > 0
-        );
-        setAllSessions(activeSessions);
+        setAllSessions(data.sessions || []);
       }
     } catch (error) {
       console.error('Error fetching all sessions:', error);
-    }
-  };
-    try {
-      socketService.takeSession(sessionId);
-      setConnectedSessions(prev => new Set([...prev, sessionId]));
-      
-      // Move from queue to active
-      const session = supportQueue.find(s => s.sessionId === sessionId);
-      if (session) {
-        setActiveSessions(prev => [...prev, session.session]);
-        setSupportQueue(prev => prev.filter(s => s.sessionId !== sessionId));
-      }
-      
-      // Select this session
-      onSessionSelect?.(session?.session);
-    } catch (error) {
-      console.error('Error taking session:', error);
     }
   };
 
   const handleJoinSession = async (session) => {
     try {
       const token = localStorage.getItem('authToken');
-      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/chat/session/${session._id}/assign-agent`, {
+      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/chat/session/${session._id}/join-agent`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -237,6 +215,25 @@ export function AgentDashboard({ botId, onSessionSelect }) {
     } catch (error) {
       console.error('Error joining session:', error);
       toast.error('Failed to join session');
+    }
+  };
+
+  const handleTakeSession = async (sessionId) => {
+    try {
+      socketService.takeSession(sessionId);
+      setConnectedSessions(prev => new Set([...prev, sessionId]));
+      
+      // Move from queue to active
+      const session = supportQueue.find(s => s.sessionId === sessionId);
+      if (session) {
+        setActiveSessions(prev => [...prev, session.session]);
+        setSupportQueue(prev => prev.filter(s => s.sessionId !== sessionId));
+      }
+      
+      // Select this session
+      onSessionSelect?.(session?.session);
+    } catch (error) {
+      console.error('Error taking session:', error);
     }
   };
   const formatTime = (timestamp) => {
