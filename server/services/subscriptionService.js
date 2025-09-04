@@ -405,12 +405,33 @@ export const checkSubscriptionLimits = async (userId, action) => {
 // Use credit
 export const useCredit = async (userId, amount = 1) => {
     try {
+        console.log(`Attempting to use ${amount} credit(s) for user ${userId}`);
+        
         const subscription = await Subscription.findOne({ userId });
         if (!subscription) {
-            throw new Error('Subscription not found');
+            console.log(`No subscription found for user ${userId}, creating default free subscription`);
+            const newSubscription = await createOrUpdateSubscription(userId, 'free');
+            if (newSubscription.getRemainingCredits() < amount) {
+                throw new Error('Insufficient credits');
+            }
+            newSubscription.credits.used += amount;
+            await newSubscription.save();
+            
+            // Also update platform credits for backward compatibility
+            await Platform.findOneAndUpdate(
+                { userId },
+                { $inc: { remainingCredits: -amount } }
+            );
+            
+            console.log(`Credit used successfully for new subscription: ${amount} credit(s) deducted`);
+            return newSubscription;
         }
 
+        console.log(`Current subscription credits: ${subscription.credits.used}/${subscription.credits.monthly}`);
+        console.log(`Remaining credits: ${subscription.getRemainingCredits()}`);
+        
         if (subscription.getRemainingCredits() < amount) {
+            console.log(`Insufficient credits for user ${userId}: needed ${amount}, available ${subscription.getRemainingCredits()}`);
             throw new Error('Insufficient credits');
         }
 
@@ -423,6 +444,7 @@ export const useCredit = async (userId, amount = 1) => {
             { $inc: { remainingCredits: -amount } }
         );
 
+        console.log(`Credit used successfully: ${amount} credit(s) deducted. New usage: ${subscription.credits.used}/${subscription.credits.monthly}`);
         return subscription;
     } catch (error) {
         console.error('Error using credit:', error);

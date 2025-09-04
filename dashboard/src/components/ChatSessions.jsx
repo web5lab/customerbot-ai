@@ -8,6 +8,15 @@ export function ChatSessions({ sessions, onSessionSelect, onSessionDelete }) {
     (session.title || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'resolved': return 'bg-green-500';
+      case 'pending': return 'bg-yellow-500';
+      case 'active': return 'bg-blue-500';
+      default: return 'bg-gray-400';
+    }
+  };
+
   const formatTimestamp = (dateString) => {
     const now = new Date().getTime();
     const timestamp = new Date(dateString).getTime();
@@ -82,6 +91,9 @@ export function ChatSessions({ sessions, onSessionSelect, onSessionDelete }) {
                         <Star className="w-3 h-3 text-yellow-500 fill-current" />
                       )}
                     </div>
+                        {session.status && (
+                          <div className={`w-2 h-2 rounded-full ${getStatusColor(session.status)}`}></div>
+                        )}
 
                     <p className="text-xs text-gray-600 mb-2 line-clamp-2">
                       {getSessionPreview(session)}
@@ -94,10 +106,12 @@ export function ChatSessions({ sessions, onSessionSelect, onSessionDelete }) {
                           <span>{formatTimestamp(session.timestamp)}</span>
                         </div>
                         <span>• {session.messageCount || 0} messages</span>
+                        {session.status && (
+                          <span>• {session.status}</span>
+                        )}
                       </div>
 
-                      <div className={`w-2 h-2 rounded-full ${session.status === 'active' ? 'bg-green-500' : 'bg-gray-300'
-                        }`}></div>
+                      <div className={`w-2 h-2 rounded-full ${getStatusColor(session.status || 'active')}`}></div>
                     </div>
                   </div>
 

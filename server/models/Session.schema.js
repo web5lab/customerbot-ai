@@ -41,6 +41,49 @@ const sessionSchema = new mongoose.Schema({
     default: 0
   },
   messages: [messageSchema],
+  status: {
+    type: String,
+    enum: ['active', 'resolved', 'pending'],
+    default: 'active'
+  },
+  resolvedAt: {
+    type: Date,
+    default: null
+  },
+  resolvedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    default: null
+  },
+  priority: {
+    type: String,
+    enum: ['low', 'medium', 'high', 'urgent'],
+    default: 'medium'
+  },
+  tags: [{
+    type: String,
+    trim: true
+  }],
+  customerEmail: {
+    type: String,
+    default: null
+  },
+  customerName: {
+    type: String,
+    default: null
+  },
+  satisfaction: {
+    rating: {
+      type: Number,
+      min: 1,
+      max: 5,
+      default: null
+    },
+    feedback: {
+      type: String,
+      default: null
+    }
+  },
   timestamp: {
     type: Date,
     default: Date.now

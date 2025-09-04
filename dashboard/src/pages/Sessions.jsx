@@ -5,7 +5,7 @@ import { api } from '../services/api';
 import { useDispatch, useSelector } from 'react-redux';
 import { getChatSessions } from '../store/global.Action';
 import { activeBotSelector, SessionsSelector } from '../store/global.Selctor';
-import { MessageSquare, Send, Download, Trash2, Edit3, Bot, User, Clock } from 'lucide-react';
+import { MessageSquare, Send, Download, Trash2, Edit3, Bot, User, Clock, CheckCircle, Star, Tag, AlertCircle, MoreHorizontal } from 'lucide-react';
 
 export function Sessions() {
   const navigate = useNavigate();
@@ -17,6 +17,11 @@ export function Sessions() {
   const [isTyping, setIsTyping] = useState(false);
   const [editingMessageId, setEditingMessageId] = useState(null);
   const [editedContent, setEditedContent] = useState('');
+  const [showResolveModal, setShowResolveModal] = useState(false);
+  const [resolveRating, setResolveRating] = useState(5);
+  const [resolveFeedback, setResolveFeedback] = useState('');
+  const [sessionPriority, setSessionPriority] = useState('medium');
+  const [sessionTags, setSessionTags] = useState('');
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -35,6 +40,13 @@ export function Sessions() {
     }
   }, [selectedSession, editingMessageId]);
 
+  useEffect(() => {
+    if (selectedSession) {
+      setSessionPriority(selectedSession.priority || 'medium');
+      setSessionTags(selectedSession.tags ? selectedSession.tags.join(', ') : '');
+    }
+  }, [selectedSession]);
+
   const handleDeleteSession = async (sessionId) => {
     try {
       await api.deleteSession(sessionId);
@@ -49,6 +61,79 @@ export function Sessions() {
   const handleSessionSelect = (session) => {
     setSelectedSession(session);
     setEditingMessageId(null);
+  };
+
+  const handleMarkAsResolved = async () => {
+    if (!selectedSession) return;
+
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/chat/session/${selectedSession._id}/resolve`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          rating: resolveRating,
+          feedback: resolveFeedback
+        })
+      });
+
+      if (response.ok) {
+        const updatedSession = { ...selectedSession, status: 'resolved', resolvedAt: new Date() };
+        setSelectedSession(updatedSession);
+        setShowResolveModal(false);
+        setResolveRating(5);
+        setResolveFeedback('');
+        dispatch(getChatSessions({ botId: activeBot._id })); // Refresh sessions
+      }
+    } catch (error) {
+      console.error('Error marking session as resolved:', error);
+    }
+  };
+
+  const handleUpdateSessionStatus = async (updates) => {
+    if (!selectedSession) return;
+
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await fetch(`${import.meta.env.VITE_SERVER_URL}/chat/session/${selectedSession._id}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(updates)
+      });
+
+      if (response.ok) {
+        const updatedSession = { ...selectedSession, ...updates };
+        setSelectedSession(updatedSession);
+        dispatch(getChatSessions({ botId: activeBot._id })); // Refresh sessions
+      }
+    } catch (error) {
+      console.error('Error updating session status:', error);
+    }
+  };
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'resolved': return 'text-green-600 bg-green-100 border-green-200';
+      case 'pending': return 'text-yellow-600 bg-yellow-100 border-yellow-200';
+      case 'active': return 'text-blue-600 bg-blue-100 border-blue-200';
+      default: return 'text-gray-600 bg-gray-100 border-gray-200';
+    }
+  };
+
+  const getPriorityColor = (priority) => {
+    switch (priority) {
+      case 'urgent': return 'text-red-600 bg-red-100 border-red-200';
+      case 'high': return 'text-orange-600 bg-orange-100 border-orange-200';
+      case 'medium': return 'text-blue-600 bg-blue-100 border-blue-200';
+      case 'low': return 'text-gray-600 bg-gray-100 border-gray-200';
+      default: return 'text-gray-600 bg-gray-100 border-gray-200';
+    }
   };
 
   const handleSendMessage = (e) => {
@@ -134,6 +219,66 @@ export function Sessions() {
 
   return (
     <div className="min-h-screen bg-white">
+      {/* Resolve Modal */}
+      {showResolveModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Mark as Resolved</h3>
+              <p className="text-sm text-gray-600">How would you rate this conversation?</p>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Satisfaction Rating
+                </label>
+                <div className="flex gap-2">
+                  {[1, 2, 3, 4, 5].map((rating) => (
+                    <button
+                      key={rating}
+                      onClick={() => setResolveRating(rating)}
+                      className={`p-2 rounded-lg transition-colors ${
+                        resolveRating >= rating
+                          ? 'text-yellow-500'
+                          : 'text-gray-300 hover:text-yellow-400'
+                      }`}
+                    >
+                      <Star className="w-6 h-6 fill-current" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Feedback (Optional)
+                </label>
+                <textarea
+                  value={resolveFeedback}
+                  onChange={(e) => setResolveFeedback(e.target.value)}
+                  placeholder="Any additional notes about this conversation..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent resize-none"
+                />
+              </div>
+            </div>
+            <div className="flex gap-3 p-6 border-t border-gray-200">
+              <button
+                onClick={() => setShowResolveModal(false)}
+                className="flex-1 px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleMarkAsResolved}
+                className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Mark Resolved
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex w-full h-screen">
         {/* Left Sidebar - Sessions List */}
         <div className="w-96 flex-shrink-0 bg-gray-50 border-r border-gray-200">
@@ -166,12 +311,49 @@ export function Sessions() {
                       <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
                       <span>{formatTimestamp(selectedSession.updatedAt)}</span>
                       <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
-                      <span className="text-green-600 font-medium">Online</span>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(selectedSession.status || 'active')}`}>
+                        {(selectedSession.status || 'active').charAt(0).toUpperCase() + (selectedSession.status || 'active').slice(1)}
+                      </span>
+                      {selectedSession.priority && (
+                        <>
+                          <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getPriorityColor(selectedSession.priority)}`}>
+                            {selectedSession.priority.charAt(0).toUpperCase() + selectedSession.priority.slice(1)} Priority
+                          </span>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
+                  {/* Session Actions */}
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={sessionPriority}
+                      onChange={(e) => {
+                        setSessionPriority(e.target.value);
+                        handleUpdateSessionStatus({ priority: e.target.value });
+                      }}
+                      className="px-3 py-1.5 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900"
+                    >
+                      <option value="low">Low Priority</option>
+                      <option value="medium">Medium Priority</option>
+                      <option value="high">High Priority</option>
+                      <option value="urgent">Urgent</option>
+                    </select>
+                    
+                    {selectedSession.status !== 'resolved' && (
+                      <button
+                        onClick={() => setShowResolveModal(true)}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 transition-colors text-sm font-medium"
+                      >
+                        <CheckCircle className="w-4 h-4" />
+                        Mark Resolved
+                      </button>
+                    )}
+                  </div>
+                  
                   <button
                     className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                     title="Export chat"
@@ -185,6 +367,43 @@ export function Sessions() {
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
+                </div>
+              </div>
+
+              {/* Session Info Bar */}
+              <div className="px-6 py-3 bg-gray-50 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4 text-sm">
+                    {selectedSession.customerName && (
+                      <span className="text-gray-700">
+                        <strong>Customer:</strong> {selectedSession.customerName}
+                      </span>
+                    )}
+                    {selectedSession.customerEmail && (
+                      <span className="text-gray-700">
+                        <strong>Email:</strong> {selectedSession.customerEmail}
+                      </span>
+                    )}
+                    {selectedSession.resolvedAt && (
+                      <span className="text-green-600">
+                        <strong>Resolved:</strong> {new Date(selectedSession.resolvedAt).toLocaleDateString()}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={sessionTags}
+                      onChange={(e) => setSessionTags(e.target.value)}
+                      onBlur={() => {
+                        const tags = sessionTags.split(',').map(tag => tag.trim()).filter(tag => tag);
+                        handleUpdateSessionStatus({ tags });
+                      }}
+                      placeholder="Add tags..."
+                      className="px-3 py-1 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 w-32"
+                    />
+                    <Tag className="w-4 h-4 text-gray-400" />
+                  </div>
                 </div>
               </div>
 

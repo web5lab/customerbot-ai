@@ -71,6 +71,20 @@ export function Dashboard() {
       icon: Users,
       change: dashboardStats?.growth?.users || '+0%',
       changeType: 'positive'
+    },
+    {
+      label: 'Resolved Sessions',
+      value: dashboardStats?.stats?.resolvedSessions?.toLocaleString() || '0',
+      icon: Target,
+      change: dashboardStats?.growth?.resolution || '+0%',
+      changeType: 'positive'
+    },
+    {
+      label: 'Credits Used',
+      value: dashboardStats?.stats?.creditsUsed?.toLocaleString() || '0',
+      icon: Zap,
+      change: dashboardStats?.growth?.credits || '+0%',
+      changeType: 'neutral'
     }
   ];
 

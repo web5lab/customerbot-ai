@@ -51,5 +51,29 @@ export const api = {
       message
     );
     return response.data;
+  },
+
+  // Session management
+  markSessionAsResolved: async (sessionId, rating, feedback) => {
+    const token = localStorage.getItem('authToken');
+    const response = await axios.put(`${API_URL}/chat/session/${sessionId}/resolve`, {
+      rating,
+      feedback
+    }, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    return response.data;
+  },
+
+  updateSessionStatus: async (sessionId, updates) => {
+    const token = localStorage.getItem('authToken');
+    const response = await axios.put(`${API_URL}/chat/session/${sessionId}/status`, updates, {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    });
+    return response.data;
   }
 };
