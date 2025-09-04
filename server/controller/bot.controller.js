@@ -150,6 +150,13 @@ export const getChatBot = async (req, res) => {
             .filter(bot => bot !== null); // Filter out any null values
 
         // Get pending invitations for this user
+        // Get user data first
+        const user = await User.findById(id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+
+        // Get pending invitations for this user
         const pendingInvitations = await Team.find({
             'members.email': user.email,
             'members.status': 'pending'
