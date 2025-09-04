@@ -307,9 +307,7 @@ export function Billing() {
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Subscription Status</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="text-center p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <p className="text-gray-600">
-                  {subscription?.planType?.charAt(0).toUpperCase() + subscription?.planType?.slice(1) || 'Free'} Plan - {subscription?.status || 'Active'}
-                </p>
+                <div className="text-2xl font-bold text-gray-900 mb-1">
                   {subscription?.daysUntilRenewal || 0}
                 </div>
                 <div className="text-sm text-gray-600">Days Until Renewal</div>
@@ -317,19 +315,14 @@ export function Billing() {
               <div className="text-center p-4 bg-gray-50 rounded-lg border border-gray-200">
                 <div className="text-2xl font-bold text-gray-900 mb-1">
                   {subscription?.status === 'active' ? 'Active' : 'Inactive'}
-              <div className="text-2xl font-bold text-blue-600">{stats?.new || 0}</div>
+                </div>
                 <div className="text-sm text-gray-600">Status</div>
               </div>
-                <div className="text-2xl font-bold text-gray-900">
-              <div className="text-2xl font-bold text-yellow-600">{stats?.contacted || 0}</div>
-                  <span className="text-base text-gray-500">/month</span>
+              <div className="text-center p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <div className="text-2xl font-bold text-gray-900 mb-1">
+                  {subscription?.planType?.charAt(0).toUpperCase() + subscription?.planType?.slice(1) || 'Free'}
                 </div>
-                <p className="text-sm text-gray-500">
-              <div className="text-2xl font-bold text-purple-600">{stats?.qualified || 0}</div>
-                </p>
-                  {subscription?.billingCycle?.charAt(0).toUpperCase() + subscription?.billingCycle?.slice(1) || 'Monthly'}
-                </div>
-              <div className="text-2xl font-bold text-green-600">{stats?.converted || 0}</div>
+                <div className="text-sm text-gray-600">Plan Type</div>
               </div>
             </div>
           </div>
